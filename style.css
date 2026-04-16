@@ -1,13 +1,20 @@
 body {
-    font-family: Arial, sans-serif;
-    background: #0f172a;
-    color: #e2e8f0;
+    font-family: Merriweather, sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    background: #f5efe0;
+    color: #0045B7;
     margin: 0;
     padding: 20px;
 }
 
 h1 {
     text-align: center;
+}
+
+h2 {
+    color: #D40732;
+    font-size: 32px;
 }
 
 .day {
@@ -17,7 +24,7 @@ h1 {
 .event {
     padding: 12px;
     margin: 8px 0;
-    background: #1e293b;
+    background: #DCD3CA;
     border-radius: 8px;
 }
 

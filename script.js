@@ -134,7 +134,9 @@ function render(events) {
 // --- LOAD ---
 async function loadSchedule() {
     try {
-        const res = await fetch(SHEET_URL);
+        const res = await fetch(SHEET_URL, {
+            cache: "no-store"
+        });
         const data = await res.json();
 
         const events = processEvents(data);
