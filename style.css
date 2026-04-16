@@ -1,0 +1,27 @@
+body {
+    font-family: Arial, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    margin: 0;
+    padding: 20px;
+}
+
+h1 {
+    text-align: center;
+}
+
+.day {
+    margin-top: 30px;
+}
+
+.event {
+    padding: 12px;
+    margin: 8px 0;
+    background: #1e293b;
+    border-radius: 8px;
+}
+
+.event.live {
+    background: #16a34a;
+    color: white;
+}
