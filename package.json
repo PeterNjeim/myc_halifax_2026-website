@@ -1,19 +1,20 @@
 {
-  "name": "vite-template-solid",
-  "version": "0.0.0",
-  "description": "",
+  "name": "myc_halifax_2026-schedule",
+  "version": "0.9.0",
+  "description": "MYC Haliafx 2026 event schedule website",
   "type": "module",
   "scripts": {
     "start": "vite",
     "dev": "vite",
+    "prebuild": "tsx scripts/fetch-schedule.ts",
     "build": "vite build",
     "serve": "vite preview",
     "deploy": "gh-pages -d dist"
   },
-  "license": "MIT",
   "devDependencies": {
     "gh-pages": "^6.3.0",
     "solid-devtools": "^0.34.3",
+    "tsx": "^4.21.0",
     "typescript": "^6.0.3",
     "vite": "^8.0.8",
     "vite-plugin-simple-html": "^1.1.0",

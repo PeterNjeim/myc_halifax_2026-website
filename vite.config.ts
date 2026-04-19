@@ -5,7 +5,7 @@ import simpleHtmlPlugin from "vite-plugin-simple-html";
 
 export default defineConfig({
   plugins: [devtools(), solidPlugin(), simpleHtmlPlugin({ minify: true })],
-  base: "/myc_halifax_2026-schedule/",
+  base: "/myc_halifax_2026-schedule/solidjs",
   server: {
     port: 3000,
   },

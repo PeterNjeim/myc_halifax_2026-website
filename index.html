@@ -40,6 +40,7 @@
             type="font/woff2"
             crossorigin="anonymous"
         />
+        <script id="__SCHEDULE__" type="application/json">[{"title":"Welcome activity","start":"2026-05-15 07:00 p.m."},{"title":"Opening ceremony","start":"2026-05-16 10:00 a.m."},{"title":"Workshops","start":"2026-05-16 01:00 p.m."},{"title":"Adoration","start":"2026-05-16 06:00 p.m."},{"title":"Mass","start":"2026-05-17 11:00 a.m."},{"title":"Test live","start":"2026-04-16 10:00 p.m.","end":"2026-04-16 11:38 p.m."},{"title":"Test live 2","start":"2026-04-16 11:39 p.m."},{"title":"Test live 3","start":"2026-04-17 12:59 a.m."},{"title":"Test live 4","start":"2026-04-17 01:10 a.m."},{"title":"Test live 5","start":"2026-04-17 01:53 a.m."},{"title":"Test live 6","start":"2026-04-17 02:23 a.m."},{"title":"Nice 7","start":"2026-04-17 08:47 p.m."},{"title":"Nice 8","start":"2026-04-17 11:35 p.m."},{"title":"Nice 9","start":"2026-04-17 11:59 p.m."},{"title":"Special activity","start":"2026-05-17 04:00 p.m."},{"title":"Gala dinner","start":"2026-05-17 08:00 p.m."}]</script>
         <style>
             @font-face {
                 font-family: "Merriweather";
@@ -258,6 +259,66 @@
                 color: var(--header);
                 font-style: italic;
                 font-weight: bold;
+            }
+
+            .skeleton {
+                display: block;
+                width: 11ch;
+                height: calc(1cap + (1lh - 1cap) / 2);
+                margin-block-start: calc((1lh - 1cap) / 2);
+                border-radius: 5px;
+                corner-shape: superellipse(2.131);
+                background-image: linear-gradient(
+                    90deg,
+                    var(--card),
+                    var(--bg),
+                    var(--card),
+                    var(--bg),
+                    var(--card)
+                );
+                background-size: 400% 100%;
+                animation: shimmer 3.09s ease-in-out infinite;
+            }
+
+            .live .skeleton {
+                background-image: linear-gradient(
+                    90deg,
+                    var(--live),
+                    var(--bg),
+                    var(--live),
+                    var(--bg),
+                    var(--live)
+                );
+            }
+
+            .skeleton:dir(rtl) {
+                animation: shimmer-rtl 3.09s ease-in-out infinite;
+            }
+
+            @supports (corner-shape: superellipse(2.131)) {
+                .skeleton {
+                    border-radius: 6em;
+                }
+            }
+
+            @keyframes shimmer {
+                0% {
+                    background-position: 0% 0;
+                }
+
+                100% {
+                    background-position: -200% 0;
+                }
+            }
+
+            @keyframes shimmer-rtl {
+                0% {
+                    background-position: 0% 0;
+                }
+
+                100% {
+                    background-position: 200% 0;
+                }
             }
         </style>
         <title>Event Schedule | MYC Halifax 2026</title>

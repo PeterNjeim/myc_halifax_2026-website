@@ -1,4 +1,5 @@
 import { createSignal, createMemo, For, onMount, createEffect } from "solid-js";
+import fallbackData from "./assets/schedule.json";
 
 type RawEvent = {
     title: string;
@@ -16,6 +17,17 @@ const SHEET_URL =
     "https://opensheet.elk.sh/1SFHHPSp4IFyQn2yODDC5XrIKQuutYc4XK2KTED4kQ8g/schedule";
 const TIMEZONE = "America/Halifax";
 const OFFSET = "-03:00";
+
+function getInlineData(): RawEvent[] | null {
+    const el = document.getElementById("__SCHEDULE__");
+    if (!el) return null;
+
+    try {
+        return JSON.parse(el.textContent || "");
+    } catch {
+        return null;
+    }
+}
 
 // --- Parsing ---
 function parseADT(str?: string): Date | null {
@@ -113,18 +125,29 @@ const dir =
 
 // --- Component ---
 export default function App() {
+    const inline = getInlineData();
+    const cached = localStorage.getItem("schedule");
+
+    const initialRaw: RawEvent[] =
+        inline ?? (cached ? JSON.parse(cached) : fallbackData);
+
     const [events, setEvents] = createSignal<Event[]>([]);
+    onMount(() => {
+        setEvents(processEvents(initialRaw));
+    });
+    const [isFresh, setIsFresh] = createSignal(false);
     const [now, setNow] = createSignal(new Date());
     const nowTime = () => now().getTime();
     let didScroll = false;
 
     async function load() {
-        const res = await fetch(SHEET_URL, {
-            cache: "no-store",
-        });
+        const res = await fetch(SHEET_URL, { cache: "no-store" });
         const data: RawEvent[] = await res.json();
 
+        localStorage.setItem("schedule", JSON.stringify(data));
+
         const next = processEvents(data);
+        setIsFresh(true);
 
         setEvents((prev) => {
             const prevMap = new Map(prev.map((e) => [getKey(e), e]));
@@ -132,17 +155,14 @@ export default function App() {
             let changed = false;
 
             const merged = next.map((e) => {
-                const key = getKey(e);
-                const existing = prevMap.get(key);
-
+                const existing = prevMap.get(getKey(e));
                 if (
                     existing &&
                     existing.start.getTime() === e.start.getTime() &&
                     existing.end.getTime() === e.end.getTime()
                 ) {
-                    return existing; // preserve identity
+                    return existing;
                 }
-
                 changed = true;
                 return e;
             });
@@ -154,7 +174,14 @@ export default function App() {
     }
 
     onMount(() => {
-        load();
+        const startFetch = () => load();
+
+        if ("requestIdleCallback" in window) {
+            requestIdleCallback(startFetch);
+        } else {
+            setTimeout(startFetch, 0);
+        }
+
         const fetchTimer = setInterval(load, 30000);
         const clockTimer = setInterval(() => setNow(new Date()), 1000);
 
@@ -203,7 +230,7 @@ export default function App() {
 
                 if (el) {
                     el.scrollIntoView({
-                        behavior: "auto",
+                        behavior: "smooth",
                         block: "center",
                     });
                     didScroll = true;
@@ -211,8 +238,6 @@ export default function App() {
             });
         });
     });
-
-    document.querySelectorAll(".skeleton").forEach((e) => e.remove());
 
     return (
         <div class="container" dir={dir}>
@@ -257,12 +282,19 @@ export default function App() {
                                             )}
                                         </span>
                                         {!isPast() && <br />}{" "}
-                                        <span class="time">
-                                            {timeFormatter.formatRange(
-                                                e.start,
-                                                e.end,
-                                            )}
-                                        </span>
+                                        {!isFresh() && e.end > now() ? (
+                                            <span
+                                                class="time skeleton"
+                                                dir={dir}
+                                            />
+                                        ) : (
+                                            <span class="time">
+                                                {timeFormatter.formatRange(
+                                                    e.start,
+                                                    e.end,
+                                                )}
+                                            </span>
+                                        )}
                                     </div>
                                 );
                             }}
