@@ -17,10 +17,11 @@ h1 {
 h2 {
     color: #d40732;
     font-size: 32px;
+    margin-block-end: 0;
 }
 
 .day {
-    margin-top: 30px;
+    margin-block-start: 30px;
 }
 
 .event {
@@ -46,8 +47,8 @@ h2 {
     display: inline-block;
     width: 8px;
     height: 8px;
-    margin-bottom: 3px;
-    margin-right: 6.5px;
+    margin-block-end: 3px;
+    margin-inline-end: 6.5px;
     border-radius: 100%;
     background: #d40732;
     position: relative;
@@ -83,4 +84,5 @@ h2 {
 
 .countdown {
     color: #d40732;
+    font-weight: bold;
 }
