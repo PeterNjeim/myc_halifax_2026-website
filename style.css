@@ -3,8 +3,10 @@ body {
     font-size: 18px;
     font-weight: 600;
     background: #f5efe0;
-    color: #0045B7;
-    margin: 0;
+    color: #0045b7;
+    margin: 0 auto;
+    min-width: auto;
+    max-width: 52.67rem;
     padding: 20px;
 }
 
@@ -13,7 +15,7 @@ h1 {
 }
 
 h2 {
-    color: #D40732;
+    color: #d40732;
     font-size: 32px;
 }
 
@@ -24,11 +26,61 @@ h2 {
 .event {
     padding: 12px;
     margin: 8px 0;
-    background: #DCD3CA;
+    background: #dcd3ca;
     border-radius: 8px;
 }
 
+/* Past events */
+.event.past {
+    margin: 4px 0;
+    padding: 6px;
+}
+
 .event.live {
-    background: #16a34a;
-    color: white;
+    background: #ffc4d3;
+    position: relative;
+    overflow: hidden;
+}
+
+.live-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-bottom: 3px;
+    margin-right: 6.5px;
+    border-radius: 100%;
+    background: #d40732;
+    position: relative;
+}
+
+/* Pulse ring */
+.live-dot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 100%;
+    background: rgba(212, 7, 50, 0.5);
+    animation: pulse-dot 5s ease-out infinite 2.5s;
+}
+
+/* Smooth + GPU-friendly */
+@keyframes pulse-dot {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    67% {
+        transform: scale(3);
+        opacity: 0;
+    }
+
+    100% {
+        transform: scale(3);
+        opacity: 0;
+    }
+}
+
+.countdown {
+    color: #d40732;
 }
