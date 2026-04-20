@@ -280,7 +280,7 @@
 
             .container .day .event .time::before {
                 opacity: 0;
-                z-index: -1;
+                /* z-index: -1; */
                 content: "";
                 position: absolute;
                 inset: 0;
@@ -300,11 +300,11 @@
                 ); */
                 background-image: linear-gradient(
                     90deg,
+                    rgb(from var(--card) r g b / 0.618),
                     transparent,
-                    rgb(from var(--bg) r g b / 0.382),
+                    rgb(from var(--card) r g b / 0.618),
                     transparent,
-                    rgb(from var(--bg) r g b / 0.382),
-                    transparent
+                    rgb(from var(--card) r g b / 0.618)
                 );
                 background-size: 400% 100%;
                 animation: shimmer 3.82s ease-in-out infinite;
@@ -315,8 +315,8 @@
                 animation: shimmer-rtl 3.82s ease-in-out infinite;
             }
 
-            /* .container .day .event.live .time::before { */
-            /* background-image: linear-gradient(
+            .container .day .event.live .time::before {
+                /* background-image: linear-gradient(
                     90deg,
                     var(--live),
                     var(--bg),
@@ -324,15 +324,15 @@
                     var(--bg),
                     var(--live)
                 ); */
-            /* background-image: linear-gradient(
+                background-image: linear-gradient(
                     90deg,
+                    rgb(from var(--live) r g b / 0.618),
                     transparent,
-                    rgb(from var(--bg) r g b / 0.382),
+                    rgb(from var(--live) r g b / 0.618),
                     transparent,
-                    rgb(from var(--bg) r g b / 0.382),
-                    transparent
+                    rgb(from var(--live) r g b / 0.618)
                 );
-            } */
+            }
 
             .container .day .event .time.skeleton {
                 opacity: 0.618;
