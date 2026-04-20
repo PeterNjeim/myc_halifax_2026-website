@@ -118,18 +118,26 @@
                 --live: #ffc7c4;
                 --header: #c1052c;
                 --text: #003592;
-                /* --header-old: #d30731;
-                --text-old: #0045b7; */
+                /* --header: #d30731;
+                --text: #0045b7; */
                 background-color: var(--bg);
             }
 
             @media (prefers-color-scheme: dark) {
                 :root {
-                    --bg: #3d3b36;
-                    --card: #66625d;
-                    --live: #7f5956;
-                    --header: #ffc0bc;
-                    --text: #d9e8ff;
+                    --bg: #050404;
+                    --card: #514d4a;
+                    --live: #684442;
+                    --header: #ffaca9;
+                    --text: #c6dbff;
+                    /* --header: #ffa19e;
+                    --text: #b5d0ff; */
+
+                    /* --bg-old: #3d3b36;
+                    --card-old: #66625d;
+                    --live-old: #7f5956;
+                    --header-old: #ffc0bc;
+                    --text-old: #d9e8ff; */
                     /* --header-old: #ffb6b2;
                     --text-old: #c8ddff; */
                     background-color: var(--bg);
@@ -266,6 +274,11 @@
                 color: var(--header);
                 font-style: italic;
                 font-weight: bold;
+            }
+
+            .duration {
+                color: var(--header);
+                font-style: italic;
             }
 
             .skeleton {

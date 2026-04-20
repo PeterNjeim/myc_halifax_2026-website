@@ -52,19 +52,19 @@ function parseADT(str?: string): Date | null {
 }
 
 // --- Formatters ---
-const timeFormatter = Intl.DateTimeFormat([], {
+const timeFormatter = new Intl.DateTimeFormat([], {
     timeStyle: "short",
     timeZone: TIMEZONE,
 });
 
-const dayFormatter = Intl.DateTimeFormat([], {
+const dayFormatter = new Intl.DateTimeFormat([], {
     weekday: "long",
     month: "short",
     day: "numeric",
     timeZone: TIMEZONE,
 });
 
-const keyFormatter = Intl.DateTimeFormat("en-CA", {
+const keyFormatter = new Intl.DateTimeFormat("en-CA", {
     timeZone: TIMEZONE,
     year: "numeric",
     month: "2-digit",
@@ -83,6 +83,30 @@ function formatRelative(ms: number): string {
     if (m < 60) return rtf.format(m, "minute");
     if (h < 24) return rtf.format(h, "hour");
     return rtf.format(d, "days");
+}
+
+function formatDuration(ms: number): string {
+    const df = new Intl.DurationFormat([], {
+        style: "narrow",
+    });
+
+    const days = Math.floor(ms / (1000 * 60 * 60 * 24));
+    ms -= days * (1000 * 60 * 60 * 24);
+
+    const hours = Math.floor(ms / (1000 * 60 * 60));
+    ms -= hours * (1000 * 60 * 60);
+
+    const minutes = Math.floor(ms / (1000 * 60));
+    ms -= minutes * (1000 * 60);
+
+    const seconds = Math.floor(ms / 1000);
+
+    return df.format({
+        days,
+        hours,
+        minutes,
+        seconds,
+    });
 }
 
 // --- Processing ---
@@ -293,6 +317,14 @@ export default function App() {
                                                     e.start,
                                                     e.end,
                                                 )}
+                                                <span class="duration">
+                                                    {" ("}
+                                                    {formatDuration(
+                                                        e.end.getTime() -
+                                                            e.start.getTime(),
+                                                    )}
+                                                    {")"}
+                                                </span>
                                             </span>
                                         )}
                                     </div>
