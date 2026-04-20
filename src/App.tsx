@@ -17,6 +17,7 @@ const SHEET_URL =
     "https://opensheet.elk.sh/1SFHHPSp4IFyQn2yODDC5XrIKQuutYc4XK2KTED4kQ8g/schedule";
 const TIMEZONE = "America/Halifax";
 const OFFSET = "-03:00";
+const USER_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 function getInlineData(): RawEvent[] | null {
     const el = document.getElementById("__SCHEDULE__");
@@ -54,6 +55,13 @@ function parseADT(str?: string): Date | null {
 // --- Formatters ---
 const timeFormatter = new Intl.DateTimeFormat([], {
     timeStyle: "short",
+    timeZone: TIMEZONE,
+});
+
+const timeFormatterWithTZ = new Intl.DateTimeFormat([], {
+    hour: "numeric",
+    minute: "numeric",
+    timeZoneName: "short",
     timeZone: TIMEZONE,
 });
 
@@ -306,27 +314,27 @@ export default function App() {
                                             )}
                                         </span>
                                         {!isPast() && <br />}{" "}
-                                        {!isFresh() && e.end > now() ? (
-                                            <span
-                                                class="time skeleton"
-                                                dir={dir}
-                                            />
-                                        ) : (
-                                            <span class="time">
-                                                {timeFormatter.formatRange(
-                                                    e.start,
-                                                    e.end,
+                                        <span
+                                            class={
+                                                !isFresh() && e.end > now()
+                                                    ? "time skeleton"
+                                                    : "time"
+                                            }
+                                            dir={dir}
+                                        >
+                                            {(USER_TZ === TIMEZONE
+                                                ? timeFormatter
+                                                : timeFormatterWithTZ
+                                            ).formatRange(e.start, e.end)}
+                                            <span class="duration">
+                                                {" ("}
+                                                {formatDuration(
+                                                    e.end.getTime() -
+                                                        e.start.getTime(),
                                                 )}
-                                                <span class="duration">
-                                                    {" ("}
-                                                    {formatDuration(
-                                                        e.end.getTime() -
-                                                            e.start.getTime(),
-                                                    )}
-                                                    {")"}
-                                                </span>
+                                                {")"}
                                             </span>
-                                        )}
+                                        </span>
                                     </div>
                                 );
                             }}

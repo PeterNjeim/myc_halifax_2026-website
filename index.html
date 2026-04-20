@@ -166,7 +166,7 @@
                 margin: 0 auto;
             }
 
-            .day h2 {
+            .container .day h2 {
                 color: var(--header);
                 margin-block-end: 0.309cap;
                 font-size: 30px;
@@ -176,13 +176,13 @@
                     opacity 0.382s ease;
             }
 
-            .day.past h2 {
+            .container .day.past h2 {
                 opacity: 0.618;
-                margin-block-end: 0.2414cap;
+                margin-block-end: 0.2575cap;
                 font-size: 25px;
             }
 
-            .event {
+            .container .day .event {
                 padding: 1cap 1em;
                 margin: 0.618cap 0;
                 border: 0px solid transparent;
@@ -198,7 +198,7 @@
                     margin 0.382s ease;
             }
 
-            .event.past {
+            .container .day .event.past {
                 padding: 0.5cap 0.5em;
                 margin: 0.309cap 0;
                 border-radius: 9.5px;
@@ -206,27 +206,29 @@
             }
 
             @supports (corner-shape: superellipse(2.131)) {
-                .event,
-                .event.past,
-                .skeleton {
+                .container .day .event,
+                .container .day .event.past,
+                .container .day .event .time.skeleton {
                     border-radius: 6lh;
                 }
             }
 
-            .event.past .time {
+            .container .day .event.past .time {
                 font-style: italic;
             }
 
-            .event .time {
+            .container .day .event .time {
+                position: relative;
                 unicode-bidi: plaintext;
+                transition: opacity 0.382s ease;
             }
 
-            .event.live {
+            .container .day .event.live {
                 background: var(--live);
                 border: 0.309ex solid var(--header);
             }
 
-            .dot {
+            .container .day .event.live .title .dot {
                 display: inline-flex;
                 width: 1ex;
                 height: 1ex;
@@ -238,23 +240,18 @@
                 position: relative;
             }
 
-            .dot::after {
+            .container .day .event.live .title .dot::after {
                 content: "";
                 position: absolute;
                 inset: 0;
                 background: inherit;
                 border-radius: 50%;
                 will-change: transform, opacity;
-                animation: pulse 6.18s infinite;
+                animation: pulse 3.82s infinite 1.46s;
             }
 
             @keyframes pulse {
                 0% {
-                    transform: scale(0);
-                    opacity: 1;
-                }
-
-                23.6% {
                     transform: scale(1);
                     opacity: 1;
                 }
@@ -270,49 +267,79 @@
                 }
             }
 
-            .countdown {
+            .container .day .event .title .countdown {
                 color: var(--header);
                 font-style: italic;
                 font-weight: bold;
             }
 
-            .duration {
+            .container .day .event .time .duration {
                 color: var(--header);
                 font-style: italic;
             }
 
-            .skeleton {
-                display: block;
+            .container .day .event .time::before {
+                opacity: 0;
+                z-index: -1;
+                content: "";
+                position: absolute;
+                inset: 0;
+                /* display: block;
                 width: 11ch;
                 height: calc(1cap + (1lh - 1cap) / 2);
-                margin-block-start: calc((1lh - 1cap) / 2);
+                margin-block-start: calc((1lh - 1cap) / 2); */
                 border-radius: 5px;
                 corner-shape: superellipse(2.131);
-                background-image: linear-gradient(
+                /* background-image: linear-gradient(
                     90deg,
                     var(--card),
                     var(--bg),
                     var(--card),
                     var(--bg),
                     var(--card)
+                ); */
+                background-image: linear-gradient(
+                    90deg,
+                    transparent,
+                    rgb(from var(--bg) r g b / 0.382),
+                    transparent,
+                    rgb(from var(--bg) r g b / 0.382),
+                    transparent
                 );
                 background-size: 400% 100%;
-                animation: shimmer 3.09s ease-in-out infinite;
+                animation: shimmer 3.82s ease-in-out infinite;
+                transition: opacity 0.382s ease;
             }
 
-            .live .skeleton {
-                background-image: linear-gradient(
+            .container .day .event .time:dir(rtl)::before {
+                animation: shimmer-rtl 3.82s ease-in-out infinite;
+            }
+
+            /* .container .day .event.live .time::before { */
+            /* background-image: linear-gradient(
                     90deg,
                     var(--live),
                     var(--bg),
                     var(--live),
                     var(--bg),
                     var(--live)
+                ); */
+            /* background-image: linear-gradient(
+                    90deg,
+                    transparent,
+                    rgb(from var(--bg) r g b / 0.382),
+                    transparent,
+                    rgb(from var(--bg) r g b / 0.382),
+                    transparent
                 );
+            } */
+
+            .container .day .event .time.skeleton {
+                opacity: 0.618;
             }
 
-            .skeleton:dir(rtl) {
-                animation: shimmer-rtl 3.09s ease-in-out infinite;
+            .container .day .event .time.skeleton::before {
+                opacity: 1;
             }
 
             @keyframes shimmer {
