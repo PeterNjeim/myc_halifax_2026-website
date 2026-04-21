@@ -1,5 +1,7 @@
 import { createSignal, createMemo, For, onMount, createEffect } from "solid-js";
 import fallbackData from "./assets/schedule.json";
+import logo from "./assets/img/MYC_Halifax_2026-Logo.svg";
+import darkLogo from "./assets/img/MYC_Halifax_2026-Logo-Dark.svg";
 
 type RawEvent = {
     title: string;
@@ -18,6 +20,7 @@ const SHEET_URL =
 const TIMEZONE = "America/Halifax";
 const OFFSET = "-03:00";
 const USER_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+const STORAGE_KEY = "schedule";
 
 function getInlineData(): RawEvent[] | null {
     const el = document.getElementById("__SCHEDULE__");
@@ -28,6 +31,22 @@ function getInlineData(): RawEvent[] | null {
     } catch {
         return null;
     }
+}
+
+function hashSchedule(data: RawEvent[]): string {
+    return JSON.stringify(data);
+}
+
+function getStored(): RawEvent[] | null {
+    try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || "");
+    } catch {
+        return null;
+    }
+}
+
+function setStored(data: RawEvent[]) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
 // --- Parsing ---
@@ -158,17 +177,18 @@ const dir =
 // --- Component ---
 export default function App() {
     const inline = getInlineData();
-    const cached = localStorage.getItem("schedule");
+    const stored = getStored();
 
-    const initialRaw: RawEvent[] =
-        inline ?? (cached ? JSON.parse(cached) : fallbackData);
+    const initialRaw: RawEvent[] = stored ?? inline ?? fallbackData ?? [];
 
     const [events, setEvents] = createSignal<Event[]>([]);
     onMount(() => {
         setEvents(processEvents(initialRaw));
     });
+    let lastHash = hashSchedule(initialRaw);
     const [isFresh, setIsFresh] = createSignal(false);
     const [timedOut, setTimedOut] = createSignal(false);
+    const [changedKeys, setChangedKeys] = createSignal<Set<string>>(new Set());
     const [now, setNow] = createSignal(new Date());
     const nowTime = () => now().getTime();
     let didScroll = false;
@@ -177,34 +197,44 @@ export default function App() {
         const res = await fetch(SHEET_URL, { cache: "no-store" });
         const data: RawEvent[] = await res.json();
 
-        localStorage.setItem("schedule", JSON.stringify(data));
+        const incomingHash = data.length + ":" + data[0]?.start;
+        const hasRealChange = incomingHash !== lastHash;
 
-        const next = processEvents(data);
-        setIsFresh(true);
-        setTimedOut(false);
+        if (hasRealChange) {
+            const next = processEvents(data);
+            setIsFresh(true);
+            setTimedOut(false);
 
-        setEvents((prev) => {
-            const prevMap = new Map(prev.map((e) => [getKey(e), e]));
+            setEvents((prev) => {
+                const prevMap = new Map(prev.map((e) => [getKey(e), e]));
 
-            let changed = false;
+                const changed = new Set<string>();
 
-            const merged = next.map((e) => {
-                const existing = prevMap.get(getKey(e));
-                if (
-                    existing &&
-                    existing.start.getTime() === e.start.getTime() &&
-                    existing.end.getTime() === e.end.getTime()
-                ) {
-                    return existing;
+                const merged = next.map((e) => {
+                    const key = getKey(e);
+                    const existing = prevMap.get(key);
+                    if (
+                        existing &&
+                        existing.start.getTime() === e.start.getTime() &&
+                        existing.end.getTime() === e.end.getTime()
+                    ) {
+                        return existing;
+                    }
+                    changed.add(key);
+                    return e;
+                });
+
+                setChangedKeys(changed);
+
+                if (changed.size > 0) {
+                    setTimeout(() => setChangedKeys(new Set()), 1618);
                 }
-                changed = true;
-                return e;
+
+                return merged;
             });
-
-            if (merged.length !== prev.length) changed = true;
-
-            return changed ? merged : prev;
-        });
+            setStored(data);
+            lastHash = incomingHash;
+        }
     }
 
     onMount(() => {
@@ -279,6 +309,18 @@ export default function App() {
 
     return (
         <div class="container" dir={dir}>
+            <div class="header">
+                <img
+                    src={
+                        window.matchMedia("(prefers-color-scheme: dark)")
+                            .matches
+                            ? darkLogo
+                            : logo
+                    }
+                    alt="MYC Halifax 2026 logo"
+                />
+                <h1>Event Schedule</h1>
+            </div>
             <For each={grouped()}>
                 {([_, list]) => (
                     <div
@@ -311,14 +353,18 @@ export default function App() {
 
                                             {isNext() && !isLive() && (
                                                 <span
-                                                    class={
-                                                        isFresh() ||
-                                                        e.end <= now()
-                                                            ? "countdown"
-                                                            : timedOut()
-                                                              ? "countdown timeout"
-                                                              : "countdown skeleton"
-                                                    }
+                                                    classList={{
+                                                        countdown: true,
+                                                        timeout:
+                                                            timedOut() &&
+                                                            !isFresh() &&
+                                                            e.end > now(),
+                                                        updated:
+                                                            isFresh() &&
+                                                            changedKeys().has(
+                                                                getKey(e),
+                                                            ),
+                                                    }}
                                                     dir={dir}
                                                 >
                                                     {timedOut() && e.end > now()
@@ -333,13 +379,18 @@ export default function App() {
                                         </span>
                                         {!isPast() && <br />}{" "}
                                         <span
-                                            class={
-                                                isFresh() || e.end <= now()
-                                                    ? "time"
-                                                    : timedOut()
-                                                      ? "time timeout"
-                                                      : "time skeleton"
-                                            }
+                                            classList={{
+                                                time: true,
+                                                timeout:
+                                                    timedOut() &&
+                                                    !isFresh() &&
+                                                    e.end > now(),
+                                                updated:
+                                                    isFresh() &&
+                                                    changedKeys().has(
+                                                        getKey(e),
+                                                    ),
+                                            }}
                                             dir={dir}
                                         >
                                             {timedOut() && e.end > now()
