@@ -208,7 +208,8 @@
             @supports (corner-shape: superellipse(2.131)) {
                 .container .day .event,
                 .container .day .event.past,
-                .container .day .event .time.skeleton {
+                .container .day .event .time.skeleton,
+                .container .day .event .title .countdown.skeleton {
                     border-radius: 6lh;
                 }
             }
@@ -217,7 +218,8 @@
                 font-style: italic;
             }
 
-            .container .day .event .time {
+            .container .day .event .time,
+            .container .day .event .title .countdown {
                 position: relative;
                 unicode-bidi: plaintext;
                 transition: opacity 0.382s ease;
@@ -278,7 +280,8 @@
                 font-style: italic;
             }
 
-            .container .day .event .time::before {
+            .container .day .event .time::before,
+            .container .day .event .title .countdown::before {
                 opacity: 0;
                 /* z-index: -1; */
                 content: "";
@@ -311,7 +314,8 @@
                 transition: opacity 0.382s ease;
             }
 
-            .container .day .event .time:dir(rtl)::before {
+            .container .day .event .time:dir(rtl)::before,
+            .container .day .event .title .countdown:dir(rtl)::before {
                 animation: shimmer-rtl 3.82s ease-in-out infinite;
             }
 
@@ -334,12 +338,24 @@
                 );
             }
 
-            .container .day .event .time.skeleton {
+            .container .day .event .time.skeleton,
+            .container .day .event .title .countdown.skeleton {
                 opacity: 0.618;
             }
 
-            .container .day .event .time.skeleton::before {
+            .container .day .event .time.skeleton::before,
+            .container .day .event .title .countdown.skeleton::before {
                 opacity: 1;
+            }
+
+            .container .day .event .time.timeout,
+            .container .day .event .title .countdown.timeout {
+                opacity: 0.618;
+                font-style: italic;
+                color: var(--header);
+                transition:
+                    opacity 0.382s ease,
+                    color 0.382s ease;
             }
 
             @keyframes shimmer {

@@ -168,6 +168,7 @@ export default function App() {
         setEvents(processEvents(initialRaw));
     });
     const [isFresh, setIsFresh] = createSignal(false);
+    const [timedOut, setTimedOut] = createSignal(false);
     const [now, setNow] = createSignal(new Date());
     const nowTime = () => now().getTime();
     let didScroll = false;
@@ -180,6 +181,7 @@ export default function App() {
 
         const next = processEvents(data);
         setIsFresh(true);
+        setTimedOut(false);
 
         setEvents((prev) => {
             const prevMap = new Map(prev.map((e) => [getKey(e), e]));
@@ -216,10 +218,14 @@ export default function App() {
 
         const fetchTimer = setInterval(load, 30000);
         const clockTimer = setInterval(() => setNow(new Date()), 1000);
+        const timeout = setTimeout(() => {
+            if (!isFresh()) setTimedOut(true);
+        }, 6180);
 
         return () => {
             clearInterval(fetchTimer);
             clearInterval(clockTimer);
+            clearTimeout(timeout);
         };
     });
 
@@ -304,8 +310,20 @@ export default function App() {
                                             <strong>{e.title}</strong>
 
                                             {isNext() && !isLive() && (
-                                                <span class="countdown">
-                                                    {" "}
+                                                <span
+                                                    class={
+                                                        isFresh() ||
+                                                        e.end <= now()
+                                                            ? "countdown"
+                                                            : timedOut()
+                                                              ? "countdown timeout"
+                                                              : "countdown skeleton"
+                                                    }
+                                                    dir={dir}
+                                                >
+                                                    {timedOut() && e.end > now()
+                                                        ? "⚠ "
+                                                        : " "}
                                                     {formatRelative(
                                                         e.start.getTime() -
                                                             now().getTime(),
@@ -316,12 +334,17 @@ export default function App() {
                                         {!isPast() && <br />}{" "}
                                         <span
                                             class={
-                                                !isFresh() && e.end > now()
-                                                    ? "time skeleton"
-                                                    : "time"
+                                                isFresh() || e.end <= now()
+                                                    ? "time"
+                                                    : timedOut()
+                                                      ? "time timeout"
+                                                      : "time skeleton"
                                             }
                                             dir={dir}
                                         >
+                                            {timedOut() && e.end > now()
+                                                ? "⚠ "
+                                                : ""}
                                             {(USER_TZ === TIMEZONE
                                                 ? timeFormatter
                                                 : timeFormatterWithTZ
