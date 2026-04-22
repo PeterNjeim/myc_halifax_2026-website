@@ -21,6 +21,12 @@ const TIMEZONE = "America/Halifax";
 const OFFSET = "-03:00";
 const USER_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
 const STORAGE_KEY = "schedule";
+const LOCALE: string | string[] =
+    navigator.language === "en-CA"
+        ? Intl.DateTimeFormat().resolvedOptions().locale.startsWith("en")
+            ? "en-CA"
+            : []
+        : [];
 
 function getInlineData(): RawEvent[] | null {
     const el = document.getElementById("__SCHEDULE__");
@@ -72,19 +78,19 @@ function parseADT(str?: string): Date | null {
 }
 
 // --- Formatters ---
-const timeFormatter = new Intl.DateTimeFormat([], {
+const timeFormatter = new Intl.DateTimeFormat(LOCALE, {
     timeStyle: "short",
     timeZone: TIMEZONE,
 });
 
-const timeFormatterWithTZ = new Intl.DateTimeFormat([], {
+const timeFormatterWithTZ = new Intl.DateTimeFormat(LOCALE, {
     hour: "numeric",
     minute: "numeric",
     timeZoneName: "short",
     timeZone: TIMEZONE,
 });
 
-const dayFormatter = new Intl.DateTimeFormat([], {
+const dayFormatter = new Intl.DateTimeFormat(LOCALE, {
     weekday: "long",
     month: "short",
     day: "numeric",
