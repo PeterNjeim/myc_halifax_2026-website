@@ -1,7 +1,15 @@
-import { createSignal, createMemo, For, onMount, createEffect } from "solid-js";
+import {
+    createSignal,
+    createMemo,
+    For,
+    onMount,
+    createEffect,
+    Show,
+} from "solid-js";
 import fallbackData from "./assets/schedule.json";
 import logo from "./assets/img/MYC_Halifax_2026-Logo.svg";
 import darkLogo from "./assets/img/MYC_Halifax_2026-Logo-Dark.svg";
+import { Transition } from "solid-transition-group";
 
 type RawEvent = {
     title: string;
@@ -195,9 +203,33 @@ export default function App() {
     const [isFresh, setIsFresh] = createSignal(false);
     const [timedOut, setTimedOut] = createSignal(false);
     const [changedKeys, setChangedKeys] = createSignal<Set<string>>(new Set());
+    const [showJump, setShowJump] = createSignal(false);
+    const [isAbove, setIsAbove] = createSignal(false);
     const [now, setNow] = createSignal(new Date());
     const nowTime = () => now().getTime();
     let didScroll = false;
+
+    function checkPosition() {
+        const live =
+            document.querySelector(".event.live") ??
+            document.querySelector(".event:has(.countdown)");
+        if (!live) return;
+
+        const rect = live.getBoundingClientRect();
+
+        const viewportLow = window.innerHeight / 1.618;
+        const viewportHigh = window.innerHeight - viewportLow;
+
+        if (rect.top > viewportLow) {
+            setShowJump(true);
+            setIsAbove(true); // live is below → scroll down
+        } else if (rect.bottom < viewportHigh) {
+            setShowJump(true);
+            setIsAbove(false); // live is above → scroll up
+        } else {
+            setShowJump(false);
+        }
+    }
 
     async function load() {
         const res = await fetch(SHEET_URL, { cache: "no-store" });
@@ -252,6 +284,8 @@ export default function App() {
             setTimeout(startFetch, 0);
         }
 
+        window.addEventListener("scroll", checkPosition);
+
         const fetchTimer = setInterval(load, 30000);
         const clockTimer = setInterval(() => setNow(new Date()), 1000);
         const timeout = setTimeout(() => {
@@ -262,6 +296,7 @@ export default function App() {
             clearInterval(fetchTimer);
             clearInterval(clockTimer);
             clearTimeout(timeout);
+            window.removeEventListener("scroll", checkPosition);
         };
     });
 
@@ -422,6 +457,36 @@ export default function App() {
                     </div>
                 )}
             </For>
+            <Transition name="jumps">
+                <Show when={showJump()}>
+                    <button
+                        title="jump"
+                        classList={{
+                            jump: true,
+                            upcoming: document.querySelector(".event.live")
+                                ? false
+                                : true,
+                        }}
+                        onClick={() => {
+                            document.querySelector(".event.live")
+                                ? document
+                                      .querySelector(".event.live")
+                                      ?.scrollIntoView({
+                                          behavior: "smooth",
+                                          block: "center",
+                                      })
+                                : document
+                                      .querySelector(".event:has(.countdown)")
+                                      ?.scrollIntoView({
+                                          behavior: "smooth",
+                                          block: "center",
+                                      });
+                        }}
+                    >
+                        <span class={isAbove() ? "down" : "up"}></span>
+                    </button>
+                </Show>
+            </Transition>
         </div>
     );
 }
