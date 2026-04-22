@@ -55,7 +55,39 @@
             crossorigin="anonymous"
         />
 
-        <script id="__SCHEDULE__" type="application/json">[{"title":"Welcome activity","start":"2026-05-15 07:00 p.m."},{"title":"Opening ceremony","start":"2026-05-16 10:00 a.m."},{"title":"Workshops","start":"2026-05-16 01:00 p.m."},{"title":"Adoration","start":"2026-05-16 06:00 p.m."},{"title":"Mass","start":"2026-05-17 11:00 a.m."},{"title":"Test live","start":"2026-04-16 10:00 p.m.","end":"2026-04-16 11:38 p.m."},{"title":"Test live 2","start":"2026-04-16 11:39 p.m."},{"title":"Test live 3","start":"2026-04-17 12:59 a.m."},{"title":"Test live 4","start":"2026-04-17 01:10 a.m."},{"title":"Test live 5","start":"2026-04-17 01:53 a.m."},{"title":"Test live 6","start":"2026-04-17 02:23 a.m."},{"title":"Nice 7","start":"2026-04-17 08:47 p.m."},{"title":"Nice 8","start":"2026-04-17 11:35 p.m."},{"title":"Nice 9","start":"2026-04-17 11:59 p.m."},{"title":"Special activity","start":"2026-05-17 04:00 p.m."},{"title":"Gala dinner","start":"2026-05-17 08:00 p.m."}]</script>
+        <script id="__SCHEDULE__" type="application/json">
+            [
+                {
+                    "title": "Welcome activity",
+                    "start": "2026-05-15 07:00 p.m."
+                },
+                {
+                    "title": "Opening ceremony",
+                    "start": "2026-05-16 10:00 a.m."
+                },
+                { "title": "Workshops", "start": "2026-05-16 01:00 p.m." },
+                { "title": "Adoration", "start": "2026-05-16 06:00 p.m." },
+                { "title": "Mass", "start": "2026-05-17 11:00 a.m." },
+                {
+                    "title": "Test live",
+                    "start": "2026-04-16 10:00 p.m.",
+                    "end": "2026-04-16 11:38 p.m."
+                },
+                { "title": "Test live 2", "start": "2026-04-16 11:39 p.m." },
+                { "title": "Test live 3", "start": "2026-04-17 12:59 a.m." },
+                { "title": "Test live 4", "start": "2026-04-17 01:10 a.m." },
+                { "title": "Test live 5", "start": "2026-04-17 01:53 a.m." },
+                { "title": "Test live 6", "start": "2026-04-17 02:23 a.m." },
+                { "title": "Nice 7", "start": "2026-04-17 08:47 p.m." },
+                { "title": "Nice 8", "start": "2026-04-17 11:35 p.m." },
+                { "title": "Nice 9", "start": "2026-04-17 11:59 p.m." },
+                {
+                    "title": "Special activity",
+                    "start": "2026-05-17 04:00 p.m."
+                },
+                { "title": "Gala dinner", "start": "2026-05-17 08:00 p.m." }
+            ]
+        </script>
         <style>
             @font-face {
                 font-family: "Merriweather";
@@ -194,7 +226,13 @@
             }
 
             .container .header h1 {
-                max-width: min-content;
+                margin: 0;
+            }
+
+            @media (max-width: 410px) {
+                .container .header h1 {
+                    max-width: min-content;
+                }
             }
 
             .container .day h2 {
