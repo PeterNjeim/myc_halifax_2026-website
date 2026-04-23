@@ -7,8 +7,8 @@ import {
     Show,
 } from "solid-js";
 import fallbackData from "./assets/schedule.json";
-import logo from "./assets/img/MYC_Halifax_2026-Logo.svg";
-import darkLogo from "./assets/img/MYC_Halifax_2026-Logo-Dark.svg";
+import logo from "./assets/imgs/MYC_Halifax_2026-Logo.svg";
+import darkLogo from "./assets/imgs/MYC_Halifax_2026-Logo-Dark.svg";
 import { Transition } from "solid-transition-group";
 
 type RawEvent = {
