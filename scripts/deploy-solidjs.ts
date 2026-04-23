@@ -3,10 +3,28 @@ import path from "path";
 import { execSync } from "child_process";
 
 const TEMP = "../myc-build-temp";
-const DEPLOY = "../myc-deploy-master/solidjs";
+const DEPLOY = "../myc-deploy-master";
+const PRESERVE = new Set([
+    ".git",
+    ".nojekyll",
+    ".gitignore",
+    "README.md",
+]);
 
 function run(cmd: string, cwd?: string) {
     execSync(cmd, { stdio: "inherit", cwd });
+}
+
+async function cleanDir(dir: string) {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+
+    for (const entry of entries) {
+        if (PRESERVE.has(entry.name)) continue;
+
+        const fullPath = path.join(dir, entry.name);
+
+        await fs.rm(fullPath, { recursive: true, force: true });
+    }
 }
 
 async function main() {
@@ -21,7 +39,7 @@ async function main() {
         run("npm run build", TEMP);
 
         // 3. Copy dist → master worktree
-        await fs.rm(DEPLOY, { recursive: true, force: true });
+        await cleanDir(DEPLOY);
         await fs.mkdir(DEPLOY, { recursive: true });
 
         const copyDir = async (src: string, dest: string) => {
@@ -45,7 +63,7 @@ async function main() {
         await fs.writeFile(path.join(DEPLOY, ".nojekyll"), "");
 
         // 4. Commit + push
-        run("git add solidjs", "../myc-deploy-master");
+        run("git add .", "../myc-deploy-master");
 
         try {
             run(`git commit -m "deploy solidjs"`, "../myc-deploy-master");
