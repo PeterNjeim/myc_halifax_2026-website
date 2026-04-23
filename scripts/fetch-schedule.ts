@@ -46,7 +46,7 @@ function validate(data: unknown): asserts data is RawEvent[] {
     if (!Array.isArray(data)) throw new Error("Invalid data");
 
     for (const e of data) {
-        if (typeof e.title !== "string" || typeof e.start !== "string") {
+        if (Object.keys(e).length !== 0 && (typeof e.title !== "string" || typeof e.start !== "string")) {
             throw new Error("Invalid event format");
         }
     }

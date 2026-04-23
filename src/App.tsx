@@ -220,12 +220,27 @@ export default function App() {
         const viewportLow = window.innerHeight / 1.618;
         const viewportHigh = window.innerHeight - viewportLow;
 
+        const scrollTop = window.scrollY;
+        const maxScroll =
+            document.documentElement.scrollHeight - window.innerHeight;
+
+        const atTop = scrollTop <= 8;
+        const atBottom = scrollTop >= maxScroll - 8;
+
         if (rect.top > viewportLow) {
-            setShowJump(true);
-            setIsAbove(true); // live is below → scroll down
+            if (atBottom) {
+                setShowJump(false);
+            } else {
+                setShowJump(true);
+                setIsAbove(true);
+            }
         } else if (rect.bottom < viewportHigh) {
-            setShowJump(true);
-            setIsAbove(false); // live is above → scroll up
+            if (atTop) {
+                setShowJump(false);
+            } else {
+                setShowJump(true);
+                setIsAbove(false);
+            }
         } else {
             setShowJump(false);
         }
