@@ -459,14 +459,8 @@ export default function App() {
             </For>
             <Transition name="jumps">
                 <Show when={showJump()}>
-                    <button
-                        title="jump"
-                        classList={{
-                            jump: true,
-                            upcoming: document.querySelector(".event.live")
-                                ? false
-                                : true,
-                        }}
+                    <div
+                        class="jump-hitbox"
                         onClick={() => {
                             document.querySelector(".event.live")
                                 ? document
@@ -483,8 +477,17 @@ export default function App() {
                                       });
                         }}
                     >
-                        <span class={isAbove() ? "down" : "up"}></span>
-                    </button>
+                        <button
+                            classList={{
+                                jump: true,
+                                upcoming: document.querySelector(".event.live")
+                                    ? false
+                                    : true,
+                            }}
+                        >
+                            <span class={isAbove() ? "down" : "up"}></span>
+                        </button>
+                    </div>
                 </Show>
             </Transition>
         </div>
