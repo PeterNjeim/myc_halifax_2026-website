@@ -150,7 +150,7 @@
                 margin: 0 auto;
             }
 
-            .container .header {
+            .header {
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -158,25 +158,25 @@
                 transition: gap 0.382s ease;
             }
 
-            .container .header img {
+            .header img {
                 font-size: 2em;
                 height: 1.618lh;
                 width: 1.6064lh;
                 transition: font-size 0.382s ease;
             }
 
-            .container .header h1 {
+            .header h1 {
                 margin: 0;
                 transition: font-size 0.382s ease;
             }
 
             @media (max-width: 410px) {
-                .container .header h1 {
+                .header h1 {
                     max-width: min-content;
                 }
             }
 
-            .container .day h2 {
+            .day h2 {
                 color: var(--header);
                 margin-block-end: 0.309cap;
                 font-size: 30px;
@@ -186,13 +186,13 @@
                     opacity 0.382s ease;
             }
 
-            .container .day.past h2 {
+            .day.past h2 {
                 opacity: 0.618;
                 margin-block-end: 0.2575cap;
                 font-size: 25px;
             }
 
-            .container .day .event {
+            .event {
                 padding: 1cap 1em;
                 margin: 0.618cap 0;
                 border: 0px solid transparent;
@@ -209,27 +209,27 @@
             }
 
             @media (max-height: 440px) {
-                .container .header {
+                .header {
                     gap: 1.309ch;
                 }
-                .container .header img {
+                .header img {
                     font-size: 1.618em;
                 }
-                .container .header h1 {
+                .header h1 {
                     font-size: 1.618em;
                 }
-                .container .day h2 {
+                .day h2 {
                     margin-block-end: 0.2575cap;
                     font-size: 25px;
                 }
-                .container .day .event {
+                .event {
                     padding: 0.5cap 0.5em;
                     margin: 0.309cap 0;
                     border-radius: 9.5px;
                 }
             }
 
-            .container .day .event.past {
+            .event.past {
                 padding: 0.5cap 0.5em;
                 margin: 0.309cap 0;
                 border-radius: 9.5px;
@@ -237,20 +237,19 @@
             }
 
             @supports (corner-shape: superellipse(2.131)) {
-                .container .day .event,
-                .container .day .event.past,
-                .container .day .event .time.skeleton,
-                .container .day .event .title .countdown.skeleton {
+                .event,
+                .time.skeleton,
+                .countdown.skeleton {
                     border-radius: 6lh;
                 }
             }
 
-            .container .day .event.past .time {
+            .event.past .time {
                 font-style: italic;
             }
 
-            .container .day .event .time,
-            .container .day .event .title .countdown {
+            .time,
+            .countdown {
                 position: relative;
                 unicode-bidi: plaintext;
                 transition:
@@ -258,12 +257,12 @@
                     color 0.382s ease;
             }
 
-            .container .day .event.live {
+            .event.live {
                 background: var(--live);
                 border: 0.309ex solid var(--header);
             }
 
-            .container .day .event.live .title .dot {
+            .dot {
                 display: inline-flex;
                 width: 1ex;
                 height: 1ex;
@@ -275,7 +274,7 @@
                 position: relative;
             }
 
-            .container .day .event.live .title .dot::after {
+            .dot::after {
                 content: "";
                 position: absolute;
                 inset: 0;
@@ -302,27 +301,27 @@
                 }
             }
 
-            .container .day .event .title .countdown {
+            .countdown {
                 color: var(--header);
                 font-style: italic;
                 font-weight: bold;
             }
 
-            .container .day .event .time .duration {
+            .duration {
                 color: var(--header);
                 font-style: italic;
             }
 
-            .container .day .event .time.timeout,
-            .container .day .event .title .countdown.timeout {
+            .time.timeout,
+            .countdown.timeout {
                 opacity: 0.618;
                 font-style: italic;
                 color: var(--header);
                 animation: pulse 1.618s ease-in-out 1;
             }
 
-            .container .day .event .time.updated,
-            .container .day .event .title .countdown.updated {
+            .time.updated,
+            .countdown.updated {
                 animation: pulse 1.618s ease-in-out 1;
             }
 
