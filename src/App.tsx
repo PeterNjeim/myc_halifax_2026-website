@@ -4,10 +4,73 @@ import {
     For,
     onMount,
     createEffect,
+    createRenderEffect,
     Show,
 } from "solid-js";
 import fallbackData from "./assets/schedule.json";
 import { Transition } from "solid-transition-group";
+
+type FitToWidthElementArg =
+    | string
+    | HTMLElement
+    | Array<HTMLElement>
+    | NodeListOf<HTMLElement>;
+
+interface FitToWidthConfig {
+    targetWidth: number;
+    elapsedTime?: number;
+}
+
+function normalizeElements(elements: FitToWidthElementArg): HTMLElement[] {
+    if (typeof elements === "string") {
+        return Array.from(document.querySelectorAll<HTMLElement>(elements));
+    }
+
+    if (elements instanceof HTMLElement) {
+        return [elements];
+    }
+
+    return Array.from(elements).filter(
+        (item): item is HTMLElement => item instanceof HTMLElement,
+    );
+}
+
+function fitToWidth(
+    elements: FitToWidthElementArg,
+    targetWidth?: number,
+): FitToWidthConfig {
+    const startTime = performance.now();
+    const elms = normalizeElements(elements);
+    const config: FitToWidthConfig = {
+        targetWidth: targetWidth ?? 0,
+    };
+
+    for (const el of elms) {
+        const elParentStyle = window.getComputedStyle(el.parentElement!);
+        const width =
+            targetWidth ??
+            el.parentElement!.clientWidth -
+                parseFloat(elParentStyle.paddingInlineStart) -
+                parseFloat(elParentStyle.paddingInlineEnd);
+
+        el.style.whiteSpace = "nowrap";
+        el.style.width = "100%";
+        el.style.minWidth = "max-content";
+        el.style.transform = "none";
+        el.style.transformOrigin = "left";
+
+        const currentWidth = el.clientWidth;
+        if (currentWidth > 0) {
+            el.style.transform = `scale(${width / currentWidth}, 1)`;
+        }
+
+        // el.style.width = `${width}px`;
+        config.targetWidth = width;
+    }
+
+    config.elapsedTime = performance.now() - startTime;
+    return config;
+}
 
 type RawEvent = {
     title: string;
@@ -159,18 +222,25 @@ function processEvents(raw: RawEvent[]): Event[] {
             start: parseADT(e.start),
             end: parseADT(e.end),
             isExplicitEnd: !!e.end,
-            location: e.location?.trim(),
+            location: e.location.trim(),
         }))
         .filter(
-            (e): e is { title: string; start: Date; end: Date | null } =>
-                !!e.start,
+            (
+                e,
+            ): e is {
+                title: string;
+                start: Date;
+                end: Date | null;
+                isExplicitEnd: boolean;
+                location: string;
+            } => !!e.start,
         )
         .map((e) => ({
             title: e.title,
             start: e.start,
             end: e.end ?? new Date(0), // temp
             isExplicitEnd: !!e.end,
-            location: e.location?.trim(),
+            location: e.location.trim(),
         }))
         .sort((a, b) => a.start.getTime() - b.start.getTime());
 
@@ -244,6 +314,28 @@ export default function App() {
     const nowTime = () => now().getTime();
     let didScroll = false;
 
+    const locationSignature = createMemo(() =>
+        events()
+            .map((e) => e.location)
+            .join("\n"),
+    );
+
+    const titleSignature = createMemo(() =>
+        events()
+            .map((e) => e.title)
+            .join("\n"),
+    );
+
+    function runFit(classes?: string) {
+        const scrollX = window.scrollX;
+        const scrollY = window.scrollY;
+
+        requestAnimationFrame(() => {
+            fitToWidth(classes ?? ".day h2, .title, .details");
+            window.scrollTo(scrollX, scrollY);
+        });
+    }
+
     function checkPosition() {
         const live =
             document.querySelector(".event.live") ??
@@ -315,7 +407,7 @@ export default function App() {
                 setChangedKeys(changed);
 
                 if (changed.size > 0) {
-                    setTimeout(() => setChangedKeys(new Set()), 1618);
+                    setTimeout(() => setChangedKeys(new Set<string>()), 1618);
                 }
 
                 return merged;
@@ -336,6 +428,33 @@ export default function App() {
 
         window.addEventListener("scroll", checkPosition);
 
+        let resizeTimer: number | undefined;
+        const handleWindowResize = () => {
+            if (resizeTimer) {
+                window.clearTimeout(resizeTimer);
+            }
+            resizeTimer = window.setTimeout(() => {
+                runFit();
+            }, 382);
+        };
+
+        window.addEventListener("resize", handleWindowResize);
+        window.addEventListener("orientationchange", handleWindowResize);
+
+        const container = document.querySelector(".container");
+        let lastContainerWidth = container?.clientWidth ?? 0;
+        const resizeObserver = new ResizeObserver((entries) => {
+            const width = entries[0]?.contentRect.width ?? 0;
+            if (width && width !== lastContainerWidth) {
+                lastContainerWidth = width;
+                runFit();
+            }
+        });
+
+        if (container) {
+            resizeObserver.observe(container);
+        }
+
         const fetchTimer = setInterval(load, 30000);
         const clockTimer = setInterval(() => setNow(new Date()), 1000);
         const timeout = setTimeout(() => {
@@ -346,7 +465,13 @@ export default function App() {
             clearInterval(fetchTimer);
             clearInterval(clockTimer);
             clearTimeout(timeout);
+            if (resizeTimer) {
+                window.clearTimeout(resizeTimer);
+            }
             window.removeEventListener("scroll", checkPosition);
+            window.removeEventListener("resize", handleWindowResize);
+            window.removeEventListener("orientationchange", handleWindowResize);
+            resizeObserver.disconnect();
         };
     });
 
@@ -364,6 +489,13 @@ export default function App() {
         }
 
         return Array.from(map.entries());
+    });
+
+    createRenderEffect(() => {
+        if (events().length === 0) return;
+        locationSignature();
+        titleSignature();
+        runFit();
     });
 
     createEffect(() => {
@@ -467,70 +599,71 @@ export default function App() {
                                                     )}
                                                 </span>
                                             )}
-                                            {e.location && (
-                                                <span
-                                                    classList={{
-                                                        location: true,
-                                                        timeout:
-                                                            timedOut() &&
-                                                            !isFresh() &&
-                                                            !isPast(),
-                                                        updated:
-                                                            isFresh() &&
-                                                            changedKeys().has(
-                                                                getKey(e),
-                                                            ),
-                                                    }}
-                                                    dir={dir}
-                                                >
-                                                    {timedOut() && !isPast()
-                                                        ? "⚠ "
-                                                        : " "}
-                                                    {"("}
-                                                    {e.location}
-                                                    {")"}
-                                                </span>
-                                            )}
                                         </span>
                                         {!isPast() && <br />}{" "}
-                                        <span
-                                            classList={{
-                                                time: true,
-                                                timeout:
-                                                    timedOut() &&
-                                                    !isFresh() &&
-                                                    !isPast(),
-                                                updated:
-                                                    isFresh() &&
-                                                    changedKeys().has(
-                                                        getKey(e),
-                                                    ),
-                                            }}
-                                            dir={dir}
-                                        >
-                                            {timedOut() && !isPast()
-                                                ? "⚠ "
-                                                : " "}
-                                            {e.isExplicitEnd
-                                                ? (USER_TZ === TIMEZONE
-                                                      ? timeFormatter
-                                                      : timeFormatterWithTZ
-                                                  ).formatRange(e.start, e.end)
-                                                : (USER_TZ === TIMEZONE
-                                                      ? timeFormatter
-                                                      : timeFormatterWithTZ
-                                                  ).format(e.start)}
-                                            {e.isExplicitEnd && (
-                                                <span class="duration">
-                                                    {" ("}
-                                                    {formatDuration(
-                                                        e.end.getTime() -
-                                                            e.start.getTime(),
-                                                    )}
-                                                    {")"}
-                                                </span>
-                                            )}
-                                        </span>
+                                        <div class="details">
+                                            <span
+                                                classList={{
+                                                    time: true,
+                                                    timeout:
+                                                        timedOut() &&
+                                                        !isFresh() &&
+                                                        !isPast(),
+                                                    updated:
+                                                        isFresh() &&
+                                                        changedKeys().has(
+                                                            getKey(e),
+                                                        ),
+                                                }}
+                                                dir={dir}
+                                            >
+                                                {timedOut() && !isPast()
+                                                    ? "⚠ "
+                                                    : " "}
+                                                {e.isExplicitEnd
+                                                    ? (USER_TZ === TIMEZONE
+                                                          ? timeFormatter
+                                                          : timeFormatterWithTZ
+                                                      ).formatRange(
+                                                          e.start,
+                                                          e.end,
+                                                      )
+                                                    : (USER_TZ === TIMEZONE
+                                                          ? timeFormatter
+                                                          : timeFormatterWithTZ
+                                                      ).format(e.start)}{" "}
+                                                {e.isExplicitEnd && (
+                                                    <span class="duration">
+                                                        {"("}
+                                                        {formatDuration(
+                                                            e.end.getTime() -
+                                                                e.start.getTime(),
+                                                        )}
+                                                        {")"}
+                                                    </span>
+                                                )}
+                                            </span>
+                                            <span
+                                                classList={{
+                                                    location: true,
+                                                    timeout:
+                                                        timedOut() &&
+                                                        !isFresh() &&
+                                                        !isPast(),
+                                                    updated:
+                                                        isFresh() &&
+                                                        changedKeys().has(
+                                                            getKey(e),
+                                                        ),
+                                                }}
+                                                dir={dir}
+                                            >
+                                                {timedOut() && !isPast()
+                                                    ? "⚠ "
+                                                    : " "}
+                                                {e.location}
+                                            </span>
+                                        </div>
                                     </div>
                                 );
                             }}

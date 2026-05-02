@@ -170,6 +170,14 @@
                 transition: font-size 0.382s ease;
             }
 
+            @media (min-height: 441px) {
+                @media (max-width: 1088px) {
+                    .day:nth-last-child(1 of .day) {
+                        margin-block-end: 4.70141cap;
+                    }
+                }
+            }
+
             @media (max-width: 410px) {
                 .header h1 {
                     max-width: min-content;
@@ -222,6 +230,11 @@
                     margin-block-end: 0.2575cap;
                     font-size: 25px;
                 }
+                @media (max-width: 1079px) {
+                    .day:nth-last-child(1 of .day) {
+                        margin-block-end: 4.39241cap;
+                    }
+                }
                 .event {
                     padding: 0.5cap 0.5em;
                     margin: 0.309cap 0;
@@ -247,6 +260,20 @@
 
             .event.past .time {
                 font-style: italic;
+            }
+
+            .title,
+            .details {
+                white-space: nowrap;
+            }
+
+            .title {
+                display: inline-block;
+            }
+
+            .details {
+                display: flex;
+                justify-content: space-between;
             }
 
             .time,
@@ -305,6 +332,8 @@
 
             .location {
                 color: var(--header);
+                font-style: italic;
+                margin-inline-start: 0.618ex;
             }
 
             .countdown {
