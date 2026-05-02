@@ -50,7 +50,7 @@
             type="font/woff2"
             crossorigin="anonymous"
         />
-        <script id="__SCHEDULE__" type="application/json">[{"title":"Welcome activity","start":"2026-05-15 07:00 p.m.","end":"2026-05-15 10:00 p.m."},{},{"title":"Opening ceremony","start":"2026-05-16 10:00 a.m."},{"title":"Workshops","start":"2026-05-16 01:00 p.m."},{"title":"Adoration","start":"2026-05-16 06:00 p.m.","end":"2026-05-16 08:00 p.m."},{},{"title":"Mass","start":"2026-05-17 11:00 a.m."},{"title":"Special activity","start":"2026-05-17 04:00 p.m."},{"title":"Gala dinner","start":"2026-05-17 08:00 p.m.","end":"2026-05-17 10:00 p.m."}]</script>
+        <script id="__SCHEDULE__" type="application/json">[{"title":"Registration","start":"2026-05-15 04:00 p.m.","end":"2026-05-15 07:00 p.m.","location":"Cedar Event Centre"},{"title":"Dinner","start":"2026-05-15 07:00 p.m.","end":"","location":"Cedar Event Centre"},{"title":"Roasry building activities","start":"2026-05-15 07:00 p.m.","end":"","location":"Cedar Event Centre"},{},{"title":"Welcome ceremony & guest speakers","start":"2026-05-16 09:00 a.m.","end":"","location":"Cedar Event Centre"},{"title":"Spiritual workshops & Adoration","start":"2026-05-16 01:30 p.m.","end":"","location":"Our Lady of Lebanon Parish"},{"title":"Halifax Harbour boat party","start":"2026-05-16 09:00 p.m.","end":"","location":"Halifax Waterfront"},{},{"title":"Mass","start":"2026-05-17 10:00 a.m.","end":"","location":"Our Lady of Lebanon Parish"},{"title":"Downtown activity","start":"2026-05-17 04:30 p.m.","end":"","location":"Downtown Halifax"},{"title":"Gala dinner","start":"2026-05-17 08:30 p.m.","end":"","location":"Cedar Event Centre"}]</script>
         <style>
             @font-face {
                 font-family: "Merriweather";
@@ -239,7 +239,8 @@
             @supports (corner-shape: superellipse(2.131)) {
                 .event,
                 .time.skeleton,
-                .countdown.skeleton {
+                .countdown.skeleton,
+                .location.skeleton {
                     border-radius: 6lh;
                 }
             }
@@ -249,7 +250,8 @@
             }
 
             .time,
-            .countdown {
+            .countdown,
+            .location {
                 position: relative;
                 unicode-bidi: plaintext;
                 transition:
@@ -301,6 +303,10 @@
                 }
             }
 
+            .location {
+                color: var(--header);
+            }
+
             .countdown {
                 color: var(--header);
                 font-style: italic;
@@ -313,7 +319,8 @@
             }
 
             .time.timeout,
-            .countdown.timeout {
+            .countdown.timeout,
+            .location.timeout {
                 opacity: 0.618;
                 font-style: italic;
                 color: var(--header);
@@ -321,7 +328,8 @@
             }
 
             .time.updated,
-            .countdown.updated {
+            .countdown.updated,
+            .location.updated {
                 animation: pulse 1.618s ease-in-out 1;
             }
 
