@@ -222,7 +222,7 @@ function processEvents(raw: RawEvent[]): Event[] {
             start: parseADT(e.start),
             end: parseADT(e.end),
             isExplicitEnd: !!e.end,
-            location: e.location.trim(),
+            location: e.location?.trim(),
         }))
         .filter(
             (
@@ -233,7 +233,7 @@ function processEvents(raw: RawEvent[]): Event[] {
                 end: Date | null;
                 isExplicitEnd: boolean;
                 location: string;
-            } => !!e.start,
+            } => !!e.start && typeof e.location === "string",
         )
         .map((e) => ({
             title: e.title,
