@@ -428,12 +428,26 @@ export default function App() {
 
         window.addEventListener("scroll", checkPosition);
 
-        let resizeTimer: number | undefined;
+        let resizeTimer1: number | undefined;
+        let resizeTimer2: number | undefined;
+        let resizeTimer3: number | undefined;
         const handleWindowResize = () => {
-            if (resizeTimer) {
-                window.clearTimeout(resizeTimer);
+            if (resizeTimer1) {
+                window.clearTimeout(resizeTimer1);
             }
-            resizeTimer = window.setTimeout(() => {
+            if (resizeTimer2) {
+                window.clearTimeout(resizeTimer2);
+            }
+            if (resizeTimer3) {
+                window.clearTimeout(resizeTimer3);
+            }
+            resizeTimer1 = window.setTimeout(() => {
+                runFit();
+            }, 127);
+            resizeTimer2 = window.setTimeout(() => {
+                runFit();
+            }, 255);
+            resizeTimer3 = window.setTimeout(() => {
                 runFit();
             }, 382);
         };
@@ -465,8 +479,14 @@ export default function App() {
             clearInterval(fetchTimer);
             clearInterval(clockTimer);
             clearTimeout(timeout);
-            if (resizeTimer) {
-                window.clearTimeout(resizeTimer);
+            if (resizeTimer1) {
+                window.clearTimeout(resizeTimer1);
+            }
+            if (resizeTimer2) {
+                window.clearTimeout(resizeTimer2);
+            }
+            if (resizeTimer3) {
+                window.clearTimeout(resizeTimer3);
             }
             window.removeEventListener("scroll", checkPosition);
             window.removeEventListener("resize", handleWindowResize);
