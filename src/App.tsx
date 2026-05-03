@@ -88,7 +88,7 @@ type Event = {
 };
 
 const SHEET_URL =
-    "https://opensheet.elk.sh/1SFHHPSp4IFyQn2yODDC5XrIKQuutYc4XK2KTED4kQ8g/schedule";
+    "https://opensheet.elk.sh/1Sbs6P_5nYPKJPacHhh5f12cRY8nByyOFLfkbhN6FPyw/schedule";
 const TIMEZONE = "America/Halifax";
 const OFFSET = "-03:00";
 const USER_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;

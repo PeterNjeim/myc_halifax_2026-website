@@ -1,14 +1,14 @@
 import fs from "fs/promises";
 
 const SHEET_URL =
-    "https://opensheet.elk.sh/1SFHHPSp4IFyQn2yODDC5XrIKQuutYc4XK2KTED4kQ8g/schedule";
+    "https://opensheet.elk.sh/1Sbs6P_5nYPKJPacHhh5f12cRY8nByyOFLfkbhN6FPyw/schedule";
 
 const HTML_PATH = "./index.html";
 const JSON_PATH = "./src/assets/schedule.json";
 
 type RawEvent = {
     title: string;
-    start: string;
+    start?: string;
     end?: string;
 };
 
@@ -46,7 +46,7 @@ function validate(data: unknown): asserts data is RawEvent[] {
     if (!Array.isArray(data)) throw new Error("Invalid data");
 
     for (const e of data) {
-        if (Object.keys(e).length !== 0 && (typeof e.title !== "string" || typeof e.start !== "string")) {
+        if (Object.keys(e).length !== 0 && typeof e.title !== "string") {
             throw new Error("Invalid event format");
         }
     }
