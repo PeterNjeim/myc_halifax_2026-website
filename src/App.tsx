@@ -164,7 +164,19 @@ function RenderWithBreaks(props: { text?: string | null }) {
         <>
             {parts.map((p, i) => (
                 <>
-                    {i > 0 && <br />} {p}
+                    {i > 0 && <br />}{" "}
+                    {p.includes(",") ? (
+                        <>
+                            <span class="speaker-position">
+                                {p.slice(0, p.indexOf(",")) + ", "}
+                            </span>
+                            <span class="speaker-domain">
+                                {p.slice(p.indexOf(",") + 1)}
+                            </span>
+                        </>
+                    ) : (
+                        p
+                    )}
                 </>
             ))}
         </>
@@ -175,6 +187,8 @@ function abbreviateLocation(name: string): string {
     return name
         .replace("Our Lady of Lebanon", "OLOL")
         .replace("Cedar Event Centre", "CEC")
+        .replace("Order of Prince Edward Island", "O.P.E.I.")
+        .replace("Antonine Maronite Order", "O.A.M.")
         .trim();
     // return name
     //     .split(/\s+/)
@@ -184,15 +198,17 @@ function abbreviateLocation(name: string): string {
 
 function Location(props: {
     e: Event;
+    property?: string;
     timedOut: () => boolean;
     isFresh: () => boolean;
     isPast: () => boolean;
     changedKeys: () => Set<string>;
 }) {
+    props.property = props.property ?? "location";
     const [open, setOpen] = createSignal(false);
     const [isAbbreviated, setIsAbbreviated] = createSignal(false);
     const [isDesktop, setIsDesktop] = createSignal(false);
-    const abbr = abbreviateLocation(props.e.location);
+    const abbr = abbreviateLocation(props.e[props.property!]);
     let timeout: NodeJS.Timeout;
     let locationEl: HTMLElement | undefined;
     let observer: MutationObserver | undefined;
@@ -201,8 +217,12 @@ function Location(props: {
         const mq = window.matchMedia("(hover: hover)");
         setIsDesktop(mq.matches);
         if (
-            props.e.location.includes("Our Lady of Lebanon") ||
-            props.e.location.includes("Cedar Event Centre")
+            props.e[props.property!].includes("Our Lady of Lebanon") ||
+            props.e[props.property!].includes("Cedar Event Centre") ||
+            props.e[props.property!].includes(
+                "Order of Prince Edward Island",
+            ) ||
+            props.e[props.property!].includes("Antonine Maronite Order")
         ) {
             if (!locationEl) return;
 
@@ -224,7 +244,7 @@ function Location(props: {
     return (
         <span
             classList={{
-                location: true,
+                [props.property!]: true,
                 abbreviated: isAbbreviated(),
                 timeout:
                     props.timedOut() && !props.isFresh() && !props.isPast(),
@@ -244,16 +264,16 @@ function Location(props: {
                     clearTimeout(timeout);
                 }
             }}
-            aria-label={props.e.location}
-            data-full={props.e.location}
+            aria-label={props.e[props.property!]}
+            data-full={props.e[props.property!]}
             ref={(el) => (locationEl = el)}
         >
             {props.timedOut() && !props.isPast() ? "⚠ " : " "}
-            {props.e.location}
+            {props.e[props.property!]}
 
             <Transition name="tooltips">
                 <Show when={open()}>
-                    <span class="tooltip">{props.e.location}</span>
+                    <span class="tooltip">{props.e[props.property!]}</span>
                 </Show>
             </Transition>
         </span>
@@ -312,23 +332,27 @@ function fitToWidth(
 
         let currentWidth = el.clientWidth;
         if (currentWidth > 0) {
-            if (el.querySelector(".location")) {
+            if (el.querySelector(".location, .order")) {
                 const abbr = abbreviateLocation(
-                    el.querySelector(".location")!.ariaLabel!,
+                    el.querySelector(".location, .order")!.ariaLabel!,
                 );
                 if (
-                    el.querySelector(".location")!.textContent !== abbr &&
+                    el.querySelector(".location, .order")!.textContent !==
+                        abbr &&
                     width < currentWidth
                 ) {
-                    el.querySelector(".location")!.textContent = abbr;
+                    el.querySelector(".location, .order")!.textContent = abbr;
                     currentWidth = el.clientWidth;
                 }
-                if (el.querySelector(".location")!.textContent === abbr) {
-                    el.querySelector(".location")!.textContent =
-                        el.querySelector(".location")!.ariaLabel;
+                if (
+                    el.querySelector(".location, .order")!.textContent === abbr
+                ) {
+                    el.querySelector(".location, .order")!.textContent =
+                        el.querySelector(".location, .order")!.ariaLabel;
                     currentWidth = el.clientWidth;
                     if (width < currentWidth) {
-                        el.querySelector(".location")!.textContent = abbr;
+                        el.querySelector(".location, .order")!.textContent =
+                            abbr;
                         currentWidth = el.clientWidth;
                     }
                 }
@@ -1035,60 +1059,61 @@ export default function App() {
                                                     <>
                                                         {e.honorific && (
                                                             <div class="honorific">
-                                                                <RenderWithBreaks
-                                                                    text={
-                                                                        e.honorific
-                                                                    }
-                                                                />
+                                                                {e.honorific}
                                                             </div>
                                                         )}
-
-                                                        <div class="name-line">
-                                                            <strong class="name">
-                                                                <RenderWithBreaks
-                                                                    text={
-                                                                        e.title
-                                                                    }
-                                                                />
-                                                            </strong>
-                                                            {e.order && (
-                                                                <span class="order">
-                                                                    {e.order}
+                                                        {/* <div class="name-line"> */}
+                                                        <strong class="name">
+                                                            {e.title}
+                                                        </strong>
+                                                        {e.order && ", "}
+                                                        <Location
+                                                            e={e}
+                                                            property="order"
+                                                            timedOut={() =>
+                                                                props.timedOut()
+                                                            }
+                                                            isFresh={() =>
+                                                                props.isFresh()
+                                                            }
+                                                            isPast={() =>
+                                                                now() > e.end
+                                                            }
+                                                            changedKeys={() =>
+                                                                props.changedKeys()
+                                                            }
+                                                        />
+                                                        {isNext() &&
+                                                            !isLive() && (
+                                                                <span
+                                                                    classList={{
+                                                                        countdown: true,
+                                                                        timeout:
+                                                                            props.timedOut() &&
+                                                                            !props.isFresh() &&
+                                                                            !isPast(),
+                                                                        updated:
+                                                                            props.isFresh() &&
+                                                                            props
+                                                                                .changedKeys()
+                                                                                .has(
+                                                                                    getKey(
+                                                                                        e,
+                                                                                    ),
+                                                                                ),
+                                                                    }}
+                                                                >
+                                                                    {props.timedOut() &&
+                                                                    !isPast()
+                                                                        ? "⚠ "
+                                                                        : " "}
+                                                                    {formatRelative(
+                                                                        e.start.getTime() -
+                                                                            now().getTime(),
+                                                                    )}
                                                                 </span>
                                                             )}
-
-                                                            {isNext() &&
-                                                                !isLive() && (
-                                                                    <span
-                                                                        classList={{
-                                                                            countdown: true,
-                                                                            timeout:
-                                                                                props.timedOut() &&
-                                                                                !props.isFresh() &&
-                                                                                !isPast(),
-                                                                            updated:
-                                                                                props.isFresh() &&
-                                                                                props
-                                                                                    .changedKeys()
-                                                                                    .has(
-                                                                                        getKey(
-                                                                                            e,
-                                                                                        ),
-                                                                                    ),
-                                                                        }}
-                                                                    >
-                                                                        {props.timedOut() &&
-                                                                        !isPast()
-                                                                            ? "⚠ "
-                                                                            : " "}
-                                                                        {formatRelative(
-                                                                            e.start.getTime() -
-                                                                                now().getTime(),
-                                                                        )}
-                                                                    </span>
-                                                                )}
-                                                        </div>
-
+                                                        {/* </div> */}
                                                         {e.speakerTitle && (
                                                             <div class="speaker-title">
                                                                 <RenderWithBreaks
@@ -1138,7 +1163,7 @@ export default function App() {
                                                     </>
                                                 )}
                                             </span>
-                                            {!isPast() && <br />}{" "}
+                                            {/* {!isPast() && <br />} */}{" "}
                                             <div class="details">
                                                 <span
                                                     classList={{
@@ -1292,7 +1317,7 @@ export default function App() {
 
         return (
             <div>
-                <div class="sheet-skeleton">
+                {/* <div class="sheet-skeleton">
                     <Suspense fallback={<div>Loading…</div>}>
                         <SheetView
                             view="speakers"
@@ -1306,7 +1331,7 @@ export default function App() {
                             ]}
                         />
                     </Suspense>
-                </div>
+                </div> */}
 
                 <ScheduleRenderer
                     title="Speakers"
@@ -1378,12 +1403,12 @@ export default function App() {
                     Sponsors{" "}
                     {provider.timedOut() && !provider.isFresh() ? "⚠ " : ""}
                 </h1>
-                <Suspense fallback={<div>Loading…</div>}>
+                {/* <Suspense fallback={<div>Loading…</div>}>
                     <SheetView
                         view="sponsors"
                         columns={["name", "level", "logo", "url"]}
                     />
-                </Suspense>
+                </Suspense> */}
 
                 <div class="sponsors-grid">
                     <For each={provider.rows()}>

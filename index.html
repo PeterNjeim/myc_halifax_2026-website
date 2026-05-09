@@ -272,12 +272,14 @@
                 .time.skeleton,
                 .countdown.skeleton,
                 .location.skeleton,
+                .order.skeleton,
                 .tooltip {
                     border-radius: 6lh !important;
                 }
             }
 
-            .event.past .time {
+            .event.past .time,
+            .order {
                 font-style: italic;
             }
 
@@ -288,7 +290,7 @@
             }
 
             .title {
-                display: inline-block;
+                display: block;
             }
 
             .details {
@@ -307,7 +309,7 @@
                 inset-inline-end: 0;
 
                 background: var(--bg);
-                color: var(--header);
+                /* color: var(--header); */
                 font-size: smaller;
                 padding: 0.5cap 0.5em;
                 margin: 0.309cap 0;
@@ -317,6 +319,10 @@
 
                 box-shadow: 0px 0.1545cap 0.618em black;
             }
+
+            /* .order .tooltip {
+                color: var(--text);
+            } */
 
             .tooltips-enter {
                 opacity: 0;
@@ -339,7 +345,8 @@
 
             .time,
             .countdown,
-            .location {
+            .location,
+            .order {
                 position: relative;
                 unicode-bidi: plaintext;
                 transition:
@@ -397,20 +404,23 @@
                 margin-inline-start: 0.618ex;
             }
 
-            .countdown {
+            .countdown,
+            .honorific {
                 color: var(--header);
                 font-style: italic;
                 font-weight: bold;
             }
 
-            .duration {
+            .duration,
+            .speaker-domain {
                 color: var(--header);
                 font-style: italic;
             }
 
             .time.timeout,
             .countdown.timeout,
-            .location.timeout {
+            .location.timeout,
+            .order.timeout {
                 opacity: 0.618;
                 font-style: italic;
                 color: var(--header);
@@ -419,7 +429,8 @@
 
             .time.updated,
             .countdown.updated,
-            .location.updated {
+            .location.updated,
+            .order.updated {
                 animation: pulse 1.618s ease-in-out 1;
             }
 
