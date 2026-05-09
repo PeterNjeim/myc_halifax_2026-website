@@ -1,4 +1,4 @@
-# MYC Halifax 2026 Event Schedule Website
+# MYC Halifax 2026 Website
 
 ## Available Scripts
 

@@ -1,12 +1,12 @@
 {
-  "name": "myc_halifax_2026-schedule",
+  "name": "myc_halifax_2026-website",
   "version": "0.9.0",
-  "description": "MYC Haliafx 2026 event schedule website",
+  "description": "MYC Haliafx 2026 website",
   "type": "module",
   "scripts": {
     "start": "vite",
     "dev": "vite",
-    "prebuild": "tsx scripts/fetch-schedule.ts",
+    "prebuild": "tsx scripts/fetch-sheets.ts",
     "build": "vite build",
     "serve": "vite preview",
     "deploy": "tsx scripts/deploy-solidjs.ts"
