@@ -50,7 +50,7 @@
             type="font/woff2"
             crossorigin="anonymous"
         />
-        <script id="__SCHEDULE__" type="application/json">[{"title":"Registration","start":"2026-05-15 04:00 p.m.","end":"2026-05-15 07:00 p.m.","location":"Our Lady of Lebanon Parish Lobby"},{"title":"Rosary Building Activity & Dinner","start":"2026-05-15 07:00 p.m.","end":"2026-05-15 11:00 p.m.","location":"Cedar Event Centre"},{"title":"Shuttles to Hotel","start":"2026-05-15 10:30 p.m.","end":"2026-05-15 11:30 p.m.","location":"Our Lady of Lebanon Parish Entrance"},{},{"title":"Welcome Ceremony","start":"2026-05-16 09:00 a.m.","end":"2026-05-16 10:30 a.m.","location":"Cedar Event Centre"},{"title":"Keynote Speakers","start":"2026-05-16 10:30 a.m.","end":"2026-05-16 12:00 p.m.","location":"Our Lady of Lebanon Church"},{"title":"Lunch","start":"2026-05-16 12:00 p.m.","end":"2026-05-16 01:30 p.m.","location":"Cedar Event Centre"},{"title":"Spiritual Workshops & Adoration","start":"2026-05-16 01:30 p.m.","end":"2026-05-16 03:30 p.m.","location":"Our Lady of Lebanon Parish"},{"title":"Shuttles to Party Boat","start":"2026-05-16 07:30 p.m.","end":"2026-05-16 08:30 p.m.","location":"Our Lady of Lebanon Parish Entrance"},{"title":"Halifax Harbour Boat Party & Dinner","start":"2026-05-16 09:00 p.m.","end":"","location":"Halifax Waterfront"},{"title":"Shuttles to Hotel?"},{},{"title":"Mass","start":"2026-05-17 10:00 a.m.","end":"2026-05-17 11:30 a.m.","location":"Our Lady of Lebanon Church"},{"title":"Shuttles to Downtown Halifax","start":"2026-05-17 12:30 p.m.","end":"2026-05-17 01:30 p.m.","location":"Our Lady of Lebanon Parish Entrance"},{"title":"Amazing Race","start":"2026-05-17 01:30 p.m.","end":"2026-05-17 05:00 p.m.","location":"Downtown Halifax"},{"title":"Shuttles to OLOL Parish?"},{"title":"Gala Dinner","start":"2026-05-17 08:30 p.m.","end":"","location":"Cedar Event Centre"},{"title":"Shuttles to Hotel?"}]</script>
+        <script id="__SCHEDULE__" type="application/json">[{"title":"Registration","start":"2026-05-15 04:00 p.m.","end":"2026-05-15 07:00 p.m.","location":"Our Lady of Lebanon Parish Lobby"},{"title":"Rosary Building Activity & Dinner","start":"2026-05-15 07:00 p.m.","end":"2026-05-15 11:00 p.m.","location":"Cedar Event Centre"},{},{"title":"Welcome Ceremony","start":"2026-05-16 09:00 a.m.","end":"2026-05-16 10:30 a.m.","location":"Cedar Event Centre"},{"title":"Keynote Speakers","start":"2026-05-16 10:30 a.m.","end":"2026-05-16 12:00 p.m.","location":"Our Lady of Lebanon Church"},{"title":"Lunch","start":"2026-05-16 12:00 p.m.","end":"2026-05-16 01:30 p.m.","location":"Cedar Event Centre"},{"title":"Spiritual Workshops & Adoration","start":"2026-05-16 01:30 p.m.","end":"2026-05-16 03:30 p.m.","location":"Our Lady of Lebanon Parish"},{"title":"Halifax Harbour Boat Party & Dinner","start":"2026-05-16 09:00 p.m.","end":"","location":"Halifax Waterfront"},{},{"title":"Mass","start":"2026-05-17 10:00 a.m.","end":"2026-05-17 11:30 a.m.","location":"Our Lady of Lebanon Church"},{"title":"Shuttles to Downtown Halifax","start":"2026-05-17 12:30 p.m.","end":"2026-05-17 01:30 p.m.","location":"Our Lady of Lebanon Parish Entrance"},{"title":"Amazing Race","start":"2026-05-17 01:30 p.m.","end":"2026-05-17 05:00 p.m.","location":"Downtown Halifax"},{"title":"Gala Dinner","start":"2026-05-17 08:30 p.m.","end":"","location":"Cedar Event Centre"}]</script>
         <style>
             @font-face {
                 font-family: "Merriweather";
@@ -148,6 +148,23 @@
                 min-width: auto;
                 max-width: 59.25rem;
                 margin: 0 auto;
+            }
+
+            .home {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                /* padding: 1cap 1em; */
+                gap: 0.618cap 0.618em;
+            }
+
+            .tile {
+                padding: 1cap 1em;
+                /* margin: 0.618cap; */
+                border: 0px solid transparent;
+                border-radius: 19px;
+                corner-shape: superellipse(2.131);
+                background: var(--card);
+                color: inherit;
             }
 
             .header {
@@ -254,8 +271,9 @@
                 .event,
                 .time.skeleton,
                 .countdown.skeleton,
-                .location.skeleton {
-                    border-radius: 6lh;
+                .location.skeleton,
+                .tooltip {
+                    border-radius: 6lh !important;
                 }
             }
 
@@ -276,6 +294,47 @@
             .details {
                 display: flex;
                 justify-content: space-between;
+            }
+
+            .abbreviated {
+                cursor: help;
+                text-decoration: underline dotted;
+            }
+
+            .tooltip {
+                position: absolute;
+                inset-block-end: 1lh;
+                inset-inline-end: 0;
+
+                background: var(--bg);
+                color: var(--header);
+                font-size: smaller;
+                padding: 0.5cap 0.5em;
+                margin: 0.309cap 0;
+                border-radius: 9.5px;
+                corner-shape: superellipse(2.131);
+                white-space: nowrap;
+
+                box-shadow: 0px 0.1545cap 0.618em black;
+            }
+
+            .tooltips-enter {
+                opacity: 0;
+                transform: translateY(1.618cap);
+            }
+
+            .tooltips-enter-active {
+                transition:
+                    opacity 0.382s ease,
+                    transform 0.382s ease;
+            }
+
+            .tooltips-exit-active {
+                opacity: 0;
+                transform: translateY(1.618cap);
+                transition:
+                    opacity 0.382s ease,
+                    transform 0.382s ease;
             }
 
             .time,
@@ -449,6 +508,23 @@
                 transition:
                     opacity 0.382s ease,
                     transform 0.382s ease;
+            }
+            /* sheet view table styles */
+            .sheet-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 0.618cap;
+            }
+
+            .sheet-table th,
+            .sheet-table td {
+                padding: 0.5cap 0.5em;
+                text-align: left;
+            }
+
+            .sheet-loading {
+                padding: 0.618cap 0;
+                opacity: 0.9;
             }
         </style>
         <title>Event Schedule | MYC Halifax 2026</title>
