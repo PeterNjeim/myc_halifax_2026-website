@@ -105,6 +105,8 @@
                 /* --header: #d30731;
                 --text: #0045b7; */
                 background-color: var(--bg);
+
+                --transform-speed: 0.382s;
             }
 
             @media (prefers-color-scheme: dark) {
@@ -255,7 +257,9 @@
 
             .center h1 {
                 margin: 0;
-                transition: font-size 0.382s ease;
+                transition:
+                    font-size 0.382s ease,
+                    transform var(--transform-speed) ease;
             }
 
             @media (min-height: 441px) {
@@ -266,10 +270,14 @@
                 }
             }
 
-            @media (max-width: 410px) {
+            /* @media (max-width: 410px) {
                 .header h1 {
                     max-width: min-content;
                 }
+            } */
+
+            .no-transform {
+                --transform-speed: 0s !important;
             }
 
             .day h2 {
@@ -280,7 +288,7 @@
                     margin 0.382s ease,
                     font-size 0.382s ease,
                     opacity 0.382s ease,
-                    transform 0.127s linear;
+                    transform var(--transform-speed) ease;
             }
 
             .day.past h2 {
@@ -306,13 +314,13 @@
             }
 
             @media (max-height: 440px) {
-                .header {
+                .center {
                     gap: 1.309ch;
                 }
-                .header img {
+                .center img {
                     font-size: 1.618em;
                 }
-                .header h1 {
+                .center h1 {
                     font-size: 1.618em;
                 }
                 .day h2 {
@@ -358,7 +366,7 @@
             .title,
             .details {
                 white-space: nowrap;
-                transition: transform 0.127s linear;
+                transition: transform var(--transform-speed) ease;
             }
 
             .title {

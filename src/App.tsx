@@ -307,6 +307,7 @@ function normalizeElements(elements: FitToWidthElementArg): HTMLElement[] {
 
 function fitToWidth(
     elements: FitToWidthElementArg,
+    willAnimate: boolean,
     targetWidth?: number,
 ): FitToWidthConfig {
     const startTime = performance.now();
@@ -316,70 +317,95 @@ function fitToWidth(
     };
 
     for (const el of elms) {
-        const elParentStyle = window.getComputedStyle(el.parentElement!);
-        let width =
-            targetWidth ??
-            el.parentElement!.clientWidth -
-                parseFloat(elParentStyle.paddingInlineStart) -
-                parseFloat(elParentStyle.paddingInlineEnd);
+        if (el.parentElement) {
+            const elParentStyle = window.getComputedStyle(el.parentElement);
+            let width =
+                targetWidth ??
+                el.parentElement.clientWidth -
+                    parseFloat(elParentStyle.paddingInlineStart) -
+                    parseFloat(elParentStyle.paddingInlineEnd);
 
-        if (
-            (!el.classList.contains("tile-text") ||
-                document.querySelector(".container")!.scrollHeight >
-                    document.querySelector(".container")!.clientHeight) &&
-            !el.parentElement!.classList.contains("center")
-        ) {
-            el.style.whiteSpace = "nowrap";
-            el.style.width = "100%";
-            el.style.minWidth = "max-content";
-        }
-        el.style.transform = "none";
-        el.style.transformOrigin =
-            window.getComputedStyle(el).direction === "rtl" ? "right" : "left";
+            if (
+                el.classList.contains("tile-text") &&
+                document.querySelector(".container")!.scrollHeight <=
+                    document.querySelector(".container")!.clientHeight
+            ) {
+                el.style.whiteSpace = "unset";
+                el.style.width = "unset";
+                el.style.minWidth = "unset";
+            }
+            if (
+                (!el.classList.contains("tile-text") ||
+                    document.querySelector(".container")!.scrollHeight >
+                        document.querySelector(".container")!.clientHeight) &&
+                !el.parentElement.classList.contains("center")
+            ) {
+                el.style.whiteSpace = "nowrap";
+                el.style.width = "100%";
+                el.style.minWidth = "max-content";
+            }
+            el.style.transform = "none";
+            el.style.transformOrigin =
+                window.getComputedStyle(el).direction === "rtl"
+                    ? "right"
+                    : "left";
 
-        let currentWidth = el.clientWidth;
-        if (el.parentElement!.classList.contains("center")) {
-            el.parentElement!.style.minWidth = "0";
-            el.style.minWidth = "0";
-            width = el.clientWidth;
-            el.style.minWidth = "";
-        }
-        if (currentWidth > 0) {
-            if (el.querySelector(".location, .order")) {
-                const abbr = abbreviateLocation(
-                    el.querySelector(".location, .order")!.ariaLabel!,
-                );
-                if (
-                    el.querySelector(".location, .order")!.textContent !==
-                        abbr &&
-                    width < currentWidth
-                ) {
-                    el.querySelector(".location, .order")!.textContent = abbr;
-                    currentWidth = el.clientWidth;
-                }
-                if (
-                    el.querySelector(".location, .order")!.textContent === abbr
-                ) {
-                    el.querySelector(".location, .order")!.textContent =
-                        el.querySelector(".location, .order")!.ariaLabel;
-                    currentWidth = el.clientWidth;
-                    if (width < currentWidth) {
+            let currentWidth = el.clientWidth;
+            if (el.parentElement.classList.contains("center")) {
+                el.parentElement.style.width = "100%";
+                el.parentElement.style.minWidth = "0";
+                el.style.minWidth = "0";
+                width = el.clientWidth;
+                el.style.minWidth = "";
+            }
+            if (currentWidth > 0) {
+                if (el.querySelector(".location, .order")) {
+                    const abbr = abbreviateLocation(
+                        el.querySelector(".location, .order")!.ariaLabel!,
+                    );
+                    if (
+                        el.querySelector(".location, .order")!.textContent !==
+                            abbr &&
+                        width < currentWidth
+                    ) {
                         el.querySelector(".location, .order")!.textContent =
                             abbr;
                         currentWidth = el.clientWidth;
                     }
+                    if (
+                        el.querySelector(".location, .order")!.textContent ===
+                        abbr
+                    ) {
+                        el.querySelector(".location, .order")!.textContent =
+                            el.querySelector(".location, .order")!.ariaLabel;
+                        currentWidth = el.clientWidth;
+                        if (width < currentWidth) {
+                            el.querySelector(".location, .order")!.textContent =
+                                abbr;
+                            currentWidth = el.clientWidth;
+                        }
+                    }
+                }
+                if (width < currentWidth) {
+                    if (!willAnimate) {
+                        el.classList.add("no-transform");
+                        window.setTimeout(() => {
+                            el.classList.remove("no-transform");
+                        }, 0);
+                    }
+                    el.style.transform = `scale(${width / currentWidth}, 1)`;
+                }
+                if (el.parentElement.classList.contains("center")) {
+                    el.parentElement.style.minWidth = "";
+                    if (el.clientHeight >= el.parentElement.clientHeight) {
+                        el.parentElement.style.width = "min-content";
+                    }
                 }
             }
-            if (width < currentWidth) {
-                el.style.transform = `scale(${width / currentWidth}, 1)`;
-            }
-            if (el.parentElement!.classList.contains("center")) {
-                el.parentElement!.style.minWidth = "";
-            }
-        }
 
-        // el.style.width = `${width}px`;
-        config.targetWidth = width;
+            // el.style.width = `${width}px`;
+            config.targetWidth = width;
+        }
     }
 
     config.elapsedTime = performance.now() - startTime;
@@ -711,13 +737,14 @@ export default function App() {
             .join("\n"),
     );
 
-    function runFit(classes?: string) {
+    function runFit(classes?: string, willAnimate = true) {
         const scrollX = window.scrollX;
         const scrollY = window.scrollY;
 
         requestAnimationFrame(() => {
             fitToWidth(
                 classes ?? ".tile-text, .center h1, .day h2, .title, .details",
+                willAnimate,
             );
             window.scrollTo(scrollX, scrollY);
         });
@@ -1003,7 +1030,10 @@ export default function App() {
 
         createRenderEffect(() => {
             if (props.events().length === 0) return;
-            runFit();
+            runFit(".title, .details", false);
+            window.setTimeout(() => {
+                runFit(".title, .details");
+            }, 382);
         });
 
         // Auto-scroll to live/next event once
@@ -1560,40 +1590,16 @@ export default function App() {
 
         window.addEventListener("scroll", checkPosition);
 
-        let resizeTimer1: number | undefined;
-        let resizeTimer2: number | undefined;
-        let resizeTimer3: number | undefined;
-        const handleWindowResize = () => {
-            if (resizeTimer1) {
-                window.clearTimeout(resizeTimer1);
-            }
-            if (resizeTimer2) {
-                window.clearTimeout(resizeTimer2);
-            }
-            if (resizeTimer3) {
-                window.clearTimeout(resizeTimer3);
-            }
-            resizeTimer1 = window.setTimeout(() => {
-                runFit();
-            }, 127);
-            resizeTimer2 = window.setTimeout(() => {
-                runFit();
-            }, 255);
-            resizeTimer3 = window.setTimeout(() => {
-                runFit();
-            }, 382);
-        };
-
-        window.addEventListener("resize", handleWindowResize);
-        window.addEventListener("orientationchange", handleWindowResize);
-
         const container = document.querySelector(".container");
         let lastContainerWidth = container?.clientWidth ?? 0;
         const resizeObserver = new ResizeObserver((entries) => {
             const width = entries[0]?.contentRect.width ?? 0;
             if (width && width !== lastContainerWidth) {
                 lastContainerWidth = width;
-                runFit();
+                runFit(undefined, false);
+                window.setTimeout(() => {
+                    runFit();
+                }, 382);
             }
         });
 
@@ -1611,18 +1617,7 @@ export default function App() {
             clearInterval(fetchTimer);
             clearInterval(clockTimer);
             clearTimeout(timeout);
-            if (resizeTimer1) {
-                window.clearTimeout(resizeTimer1);
-            }
-            if (resizeTimer2) {
-                window.clearTimeout(resizeTimer2);
-            }
-            if (resizeTimer3) {
-                window.clearTimeout(resizeTimer3);
-            }
             window.removeEventListener("scroll", checkPosition);
-            window.removeEventListener("resize", handleWindowResize);
-            window.removeEventListener("orientationchange", handleWindowResize);
             resizeObserver.disconnect();
         };
     });
@@ -1644,21 +1639,14 @@ export default function App() {
     });
 
     createRenderEffect(() => {
-        if (events().length === 0) return;
         viewSignature();
         locationSignature();
         titleSignature();
         liveSignature();
-        window.setTimeout(() => {
-            runFit();
-        }, 127);
-        window.setTimeout(() => {
-            runFit();
-        }, 255);
+        runFit(undefined, false);
         window.setTimeout(() => {
             runFit();
         }, 382);
-        // runFit();
     });
 
     createEffect(() => {
@@ -1705,7 +1693,6 @@ export default function App() {
                                 class="jump"
                                 onClick={() => {
                                     setView("home");
-                                    runFit();
                                 }}
                             >
                                 {" "}
