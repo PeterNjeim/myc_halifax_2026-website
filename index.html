@@ -142,47 +142,118 @@
                 font-size: 20px;
                 background: var(--bg);
                 color: var(--text);
+                margin: unset;
+            }
+
+            button {
+                all: unset;
+
+                cursor: pointer;
+                display: inline-block;
+                box-sizing: border-box;
             }
 
             .container {
+                height: 100vh;
+                height: 100dvh;
+                display: flex;
+                flex-direction: column;
                 min-width: auto;
                 max-width: 59.25rem;
                 margin: 0 auto;
             }
 
+            .back {
+                flex: 1;
+                align-self: center;
+            }
+
+            .center {
+                justify-content: center;
+                align-items: center;
+                gap: 1.618ch;
+                transition: gap 0.382s;
+                display: flex;
+                /* min-width: 0; */
+            }
+
+            /* .center h1 {
+                min-width: 0;
+            } */
+
+            .spacer {
+                visibility: hidden;
+                flex: 1;
+            }
+
             .home {
+                height: 100%;
                 display: grid;
+                max-width: 100vw;
+                max-width: 100dvw;
                 grid-template-columns: repeat(2, 1fr);
                 /* padding: 1cap 1em; */
                 gap: 0.618cap 0.618em;
+                grid-auto-rows: 1fr;
             }
 
             .tile {
-                padding: 1cap 1em;
+                overflow: hidden;
+                text-align: center;
+                padding: 0;
                 /* margin: 0.618cap; */
-                border: 0px solid transparent;
+                border: 0.309ex solid transparent;
                 border-radius: 19px;
                 corner-shape: superellipse(2.131);
                 background: var(--card);
                 color: inherit;
+                font-size: 40px;
+                transition:
+                    border-color 0.382s ease,
+                    border-width 0.382s ease,
+                    background-color 0.382s ease,
+                    color 0.382s ease,
+                    font-weight 0.382s ease;
+            }
+
+            .tile:hover {
+                border: 0.309ex solid var(--header);
+                background: var(--live);
+                color: var(--text);
+                font-weight: bold;
+                transition: 0s;
+            }
+
+            .tile:active {
+                border: 0.309ex solid var(--live);
+                background: var(--bg);
+                color: var(--live);
+                font-weight: bold;
+            }
+
+            .tile-text {
+                display: inline-block;
+                /* white-space: unset !important;
+                min-width: unset !important; */
+                /* width: 50%; */
             }
 
             .header {
                 display: flex;
-                align-items: center;
+                /* align-items: center;
                 justify-content: center;
                 gap: 1.618ch;
-                transition: gap 0.382s ease;
+                transition: gap 0.382s ease; */
             }
 
-            .header img {
+            .center img {
                 font-size: 2em;
                 height: 1.618lh;
                 width: 1.6064lh;
                 transition: font-size 0.382s ease;
             }
 
-            .header h1 {
+            .center h1 {
                 margin: 0;
                 transition: font-size 0.382s ease;
             }
@@ -268,6 +339,7 @@
             }
 
             @supports (corner-shape: superellipse(2.131)) {
+                .tile,
                 .event,
                 .time.skeleton,
                 .countdown.skeleton,
@@ -472,6 +544,18 @@
                 -webkit-tap-highlight-color: transparent;
             }
 
+            .jump:has(.left) {
+                justify-content: right;
+                align-items: center;
+                position: unset;
+            }
+
+            .jump:has(.right) {
+                justify-content: left;
+                align-items: center;
+                position: unset;
+            }
+
             .jump.upcoming {
                 background: var(--bg);
                 border: 0.309ex solid var(--card);
@@ -486,7 +570,9 @@
             }
 
             .jump .up,
-            .jump .down {
+            .jump .down,
+            .jump .left,
+            .jump .right {
                 display: inline-block;
                 border-left: 0.477ex solid var(--text);
                 border-top: 0.477ex solid var(--text);
@@ -500,6 +586,14 @@
 
             .jump .down {
                 transform: rotate(225deg) scale(0.6478);
+            }
+
+            .jump .left {
+                transform: rotate(315deg) scale(0.6478);
+            }
+
+            .jump .right {
+                transform: rotate(135deg) scale(0.6478);
             }
 
             .jumps-enter {
