@@ -157,27 +157,78 @@ function formatDuration(ms: number): string {
     });
 }
 
-function RenderWithBreaks(props: { text?: string | null }) {
-    const t = props.text ?? "";
+function RenderWithBreaks(props: {
+    e: Event;
+    property: string;
+    timedOut: () => boolean;
+    isFresh: () => boolean;
+    isPast: () => boolean;
+    changedKeys: () => Set<string>;
+}) {
+    const t = props.e[props.property];
     const parts = String(t).split("\\n");
+
     return (
         <>
             {parts.map((p, i) => (
-                <>
-                    {i > 0 && <br />}{" "}
+                <div class="speakerTitle">
+                    {/* {i > 0 && <br />}{" "} */}
                     {p.includes(",") ? (
                         <>
-                            <span class="speaker-position">
-                                {p.slice(0, p.indexOf(",")) + ", "}
-                            </span>
-                            <span class="speaker-domain">
-                                {p.slice(p.indexOf(",") + 1)}
-                            </span>
+                            <Location e={props.e}
+                                property="speakerTitle"
+                                part={0}
+                                index={i}
+                                timedOut={() =>
+                                    props.timedOut()
+                                }
+                                isFresh={() =>
+                                    props.isFresh()
+                                }
+                                isPast={() =>
+                                    props.isPast()
+                                }
+                                changedKeys={() =>
+                                    props.changedKeys()
+                                }
+                            />
+                            {", "}
+                            <Location e={props.e}
+                                property="speakerTitle"
+                                part={1}
+                                index={i}
+                                timedOut={() =>
+                                    props.timedOut()
+                                }
+                                isFresh={() =>
+                                    props.isFresh()
+                                }
+                                isPast={() =>
+                                    props.isPast()
+                                }
+                                changedKeys={() =>
+                                    props.changedKeys()
+                                }
+                            />
                         </>
                     ) : (
-                        p
+                        <Location e={props.e}
+                            property="speakerTitle"
+                            timedOut={() =>
+                                props.timedOut()
+                            }
+                            isFresh={() =>
+                                props.isFresh()
+                            }
+                            isPast={() =>
+                                props.isPast()
+                            }
+                            changedKeys={() =>
+                                props.changedKeys()
+                            }
+                        />
                     )}
-                </>
+                </div>
             ))}
         </>
     );
@@ -189,7 +240,14 @@ function abbreviateLocation(name: string): string {
         .replace("Cedar Event Centre", "CEC")
         .replace("Order of Prince Edward Island", "O.P.E.I.")
         .replace("Antonine Maronite Order", "O.A.M.")
-        .trim();
+        .replace("Prince Edward Island", "P.E.I.")
+        .replace("St. Isaiah Monastery, Rome, Italy", "St. Isaiah Monastery")
+        .replace("Former", "Fmr.")
+        .replace("President", "Pres.")
+        .replace("Procurator General", "Proc. Gen.");
+    // .replace("Lieutenant Governor of P.E.I.", "L.G. of P.E.I.")
+    // .trim();
+    // return abbr === name ? "" : abbr;
     // return name
     //     .split(/\s+/)
     //     .map((w) => w[0]?.toUpperCase())
@@ -198,82 +256,102 @@ function abbreviateLocation(name: string): string {
 
 function Location(props: {
     e: Event;
-    property?: string;
+    property: string;
+    part?: number;
+    index?: number;
     timedOut: () => boolean;
     isFresh: () => boolean;
     isPast: () => boolean;
     changedKeys: () => Set<string>;
 }) {
-    props.property = props.property ?? "location";
     const [open, setOpen] = createSignal(false);
-    const [isAbbreviated, setIsAbbreviated] = createSignal(false);
+    // const [isAbbreviated, setIsAbbreviated] = createSignal(false);
     const [isDesktop, setIsDesktop] = createSignal(false);
-    const abbr = abbreviateLocation(props.e[props.property!]);
+    let text = props.e[props.property];
+    if (props.index !== undefined) {
+        const parts = props.e[props.property]!.split("\\n");
+        const p = parts[props.index];
+        text = !props.part ? p.slice(0, p.indexOf(",")) : p.slice(p.indexOf(",") + 1)
+    }
+    let abbr = abbreviateLocation(text);
+
     let timeout: NodeJS.Timeout;
     let locationEl: HTMLElement | undefined;
-    let observer: MutationObserver | undefined;
+    // let observer: MutationObserver | undefined;
 
     onMount(() => {
         const mq = window.matchMedia("(hover: hover)");
         setIsDesktop(mq.matches);
-        if (
-            props.e[props.property!].includes("Our Lady of Lebanon") ||
-            props.e[props.property!].includes("Cedar Event Centre") ||
-            props.e[props.property!].includes(
-                "Order of Prince Edward Island",
-            ) ||
-            props.e[props.property!].includes("Antonine Maronite Order")
-        ) {
-            if (!locationEl) return;
 
-            setIsAbbreviated(locationEl.textContent === abbr);
+        locationEl?.addEventListener("click", (event) => {
+            event.stopPropagation();
+        })
 
-            observer = new MutationObserver(() => {
-                if (!locationEl) return;
-                setIsAbbreviated(locationEl.textContent === abbr);
-            });
+        document.addEventListener("click", (event) => {
+            if (!locationEl!.contains(event.target as Node)) {
+                setOpen(false)
+            }
+        });
 
-            observer.observe(locationEl, {
-                childList: true,
-            });
-        }
+        // if (
+        //     text.includes("Our Lady of Lebanon") ||
+        //     text.includes("Cedar Event Centre") ||
+        //     text.includes(
+        //         "Order of Prince Edward Island",
+        //     ) ||
+        //     text.includes("Antonine Maronite Order")
+        // ) {
+        // if (!locationEl) return;
+        // setIsAbbreviated(locationEl.textContent === abbr);
+
+        // observer = new MutationObserver(() => {
+        //     if (!locationEl) return;
+        //     setIsAbbreviated(locationEl.textContent === abbr);
+        // });
+
+        // observer.observe(locationEl, {
+        //     childList: true,
+        // });
+        // }
     });
 
-    onCleanup(() => observer?.disconnect());
+    // onCleanup(() => observer?.disconnect());
 
     return (
         <span
             classList={{
-                [props.property!]: true,
-                abbreviated: isAbbreviated(),
+                [props.property]: props.property !== "speakerTitle" ? true : false,
+                "speaker-title": props.part === 0,
+                "speaker-domain": props.part === 1,
+                "no-abbr": text === abbr,
                 timeout:
                     props.timedOut() && !props.isFresh() && !props.isPast(),
                 updated:
                     props.isFresh() && props.changedKeys().has(getKey(props.e)),
             }}
             tabIndex={0}
-            onMouseEnter={() => (isDesktop() ? setOpen(isAbbreviated()) : null)}
+            onMouseEnter={(el) => (isDesktop() ? setOpen(el.target.classList.contains("abbreviated")) : null)}
             onMouseLeave={() => (isDesktop() ? setOpen(false) : null)}
-            onFocus={() => (isDesktop() ? setOpen(isAbbreviated()) : null)}
+            onFocus={(el) => (isDesktop() ? setOpen(el.target.classList.contains("abbreviated")) : null)}
             onBlur={() => (isDesktop() ? setOpen(false) : null)}
             onTouchStart={(el) => {
-                setOpen(isAbbreviated());
+                setOpen(!open() && el.target.classList.contains("abbreviated"));
                 if (open()) {
                     timeout = setTimeout(() => setOpen(false), 3236);
                 } else {
                     clearTimeout(timeout);
                 }
             }}
-            aria-label={props.e[props.property!]}
-            data-full={props.e[props.property!]}
+            aria-label={text}
+            data-full={text}
             ref={(el) => (locationEl = el)}
         >
             {props.timedOut() && !props.isPast() ? "⚠ " : " "}
-            {props.e[props.property!]}
+            {text}
 
             <Transition name="tooltips">
                 <Show when={open()}>
-                    <span class="tooltip">{props.e[props.property!]}</span>
+                    <span class="tooltip">{text}</span>
                 </Show>
             </Transition>
         </span>
@@ -315,6 +393,7 @@ function fitToWidth(
     const config: FitToWidthConfig = {
         targetWidth: targetWidth ?? 0,
     };
+    const abbrClasses = ".location, .order, .speakerTitle > span"
 
     for (const el of elms) {
         if (el.parentElement) {
@@ -322,13 +401,13 @@ function fitToWidth(
             let width =
                 targetWidth ??
                 el.parentElement.clientWidth -
-                    parseFloat(elParentStyle.paddingInlineStart) -
-                    parseFloat(elParentStyle.paddingInlineEnd);
+                parseFloat(elParentStyle.paddingInlineStart) -
+                parseFloat(elParentStyle.paddingInlineEnd);
 
             if (
                 el.classList.contains("tile-text") &&
                 document.querySelector(".container")!.scrollHeight <=
-                    document.querySelector(".container")!.clientHeight
+                document.querySelector(".container")!.clientHeight
             ) {
                 el.style.whiteSpace = "unset";
                 el.style.width = "unset";
@@ -337,7 +416,7 @@ function fitToWidth(
             if (
                 (!el.classList.contains("tile-text") ||
                     document.querySelector(".container")!.scrollHeight >
-                        document.querySelector(".container")!.clientHeight) &&
+                    document.querySelector(".container")!.clientHeight) &&
                 !el.parentElement.classList.contains("center")
             ) {
                 el.style.whiteSpace = "nowrap";
@@ -359,32 +438,40 @@ function fitToWidth(
                 el.style.minWidth = "";
             }
             if (currentWidth > 0) {
-                if (el.querySelector(".location, .order")) {
-                    const abbr = abbreviateLocation(
-                        el.querySelector(".location, .order")!.ariaLabel!,
-                    );
-                    if (
-                        el.querySelector(".location, .order")!.textContent !==
-                            abbr &&
-                        width < currentWidth
-                    ) {
-                        el.querySelector(".location, .order")!.textContent =
-                            abbr;
-                        currentWidth = el.clientWidth;
-                    }
-                    if (
-                        el.querySelector(".location, .order")!.textContent ===
-                        abbr
-                    ) {
-                        el.querySelector(".location, .order")!.textContent =
-                            el.querySelector(".location, .order")!.ariaLabel;
-                        currentWidth = el.clientWidth;
-                        if (width < currentWidth) {
-                            el.querySelector(".location, .order")!.textContent =
-                                abbr;
-                            currentWidth = el.clientWidth;
+                if (el.querySelector(abbrClasses)) {
+                    const abbrEls = el.querySelectorAll(abbrClasses)!;
+                    abbrEls.forEach((abbrEl) => {
+                        if (!abbrEl.classList.contains("no-abbr")) {
+                            const abbr = abbreviateLocation(
+                                abbrEl.ariaLabel!,
+                            );
+                            if (
+                                abbrEl.textContent !==
+                                abbr &&
+                                width < currentWidth
+                            ) {
+                                abbrEl.textContent =
+                                    abbr;
+                                abbrEl.classList.add("abbreviated")
+                                currentWidth = el.clientWidth;
+                            }
+                            if (
+                                abbrEl.textContent ===
+                                abbr
+                            ) {
+                                abbrEl.textContent =
+                                    abbrEl.ariaLabel;
+                                abbrEl.classList.remove("abbreviated")
+                                currentWidth = el.clientWidth;
+                                if (width < currentWidth) {
+                                    abbrEl.textContent =
+                                        abbr;
+                                    abbrEl.classList.add("abbreviated")
+                                    currentWidth = el.clientWidth;
+                                }
+                            }
                         }
-                    }
+                    });
                 }
                 if (width < currentWidth) {
                     if (!willAnimate) {
@@ -534,7 +621,7 @@ function InlineSheet(props: { view: string; columns: string[] }) {
     function setStored(key: string, data: any) {
         try {
             localStorage.setItem(key, JSON.stringify(data));
-        } catch {}
+        } catch { }
     }
 
     function normalizeRows(data: any[]): Record<string, any>[] {
@@ -635,7 +722,7 @@ function InlineSheet(props: { view: string; columns: string[] }) {
                                                     >
                                                         <span>
                                                             {(USER_TZ ===
-                                                            TIMEZONE
+                                                                TIMEZONE
                                                                 ? timeFormatter
                                                                 : timeFormatterWithTZ
                                                             ).format(
@@ -652,7 +739,7 @@ function InlineSheet(props: { view: string; columns: string[] }) {
                                                         <span>
                                                             {"\u00A0—\u00A0"}
                                                             {(USER_TZ ===
-                                                            TIMEZONE
+                                                                TIMEZONE
                                                                 ? timeFormatter
                                                                 : timeFormatterWithTZ
                                                             ).format(
@@ -743,7 +830,7 @@ export default function App() {
 
         requestAnimationFrame(() => {
             fitToWidth(
-                classes ?? ".tile-text, .center h1, .day h2, .title, .details",
+                classes ?? ".tile-text, .center h1, .day h2, .honorific, .name-line, .speakerTitle, .details",
                 willAnimate,
             );
             window.scrollTo(scrollX, scrollY);
@@ -833,7 +920,7 @@ export default function App() {
         function setStoredLocal(data: any) {
             try {
                 localStorage.setItem(storageKey, JSON.stringify(data));
-            } catch {}
+            } catch { }
         }
 
         function normalizeRows(data: any[]): Record<string, any>[] {
@@ -921,7 +1008,7 @@ export default function App() {
                                 if (
                                     existing &&
                                     existing.start.getTime() ===
-                                        e.start.getTime() &&
+                                    e.start.getTime() &&
                                     existing.end.getTime() === e.end.getTime()
                                 ) {
                                     return existing;
@@ -1030,9 +1117,9 @@ export default function App() {
 
         createRenderEffect(() => {
             if (props.events().length === 0) return;
-            runFit(".title, .details", false);
+            runFit(".honorific, .name-line, .speakerTitle, .details", false);
             window.setTimeout(() => {
-                runFit(".title, .details");
+                runFit(".honorific, .name-line, .speakerTitle, .details");
             }, 382);
         });
 
@@ -1113,74 +1200,83 @@ export default function App() {
                                                 )}
 
                                                 {e.honorific ||
-                                                e.speakerTitle ||
-                                                e.order ? (
+                                                    e.speakerTitle ||
+                                                    e.order ? (
                                                     <>
                                                         {e.honorific && (
                                                             <div class="honorific">
                                                                 {e.honorific}
                                                             </div>
                                                         )}
-                                                        {/* <div class="name-line"> */}
-                                                        <strong class="name">
-                                                            {e.title}
-                                                        </strong>
-                                                        {e.order && ", "}
-                                                        <Location
-                                                            e={e}
-                                                            property="order"
-                                                            timedOut={() =>
-                                                                props.timedOut()
-                                                            }
-                                                            isFresh={() =>
-                                                                props.isFresh()
-                                                            }
-                                                            isPast={() =>
-                                                                now() > e.end
-                                                            }
-                                                            changedKeys={() =>
-                                                                props.changedKeys()
-                                                            }
-                                                        />
-                                                        {isNext() &&
-                                                            !isLive() && (
-                                                                <span
-                                                                    classList={{
-                                                                        countdown: true,
-                                                                        timeout:
-                                                                            props.timedOut() &&
-                                                                            !props.isFresh() &&
-                                                                            !isPast(),
-                                                                        updated:
-                                                                            props.isFresh() &&
-                                                                            props
-                                                                                .changedKeys()
-                                                                                .has(
-                                                                                    getKey(
-                                                                                        e,
+                                                        <div class="name-line">
+                                                            <strong class="speaker-name">
+                                                                {e.title}
+                                                            </strong>
+                                                            {e.order && ", "}
+                                                            <Location
+                                                                e={e}
+                                                                property="order"
+                                                                timedOut={() =>
+                                                                    props.timedOut()
+                                                                }
+                                                                isFresh={() =>
+                                                                    props.isFresh()
+                                                                }
+                                                                isPast={() =>
+                                                                    now() > e.end
+                                                                }
+                                                                changedKeys={() =>
+                                                                    props.changedKeys()
+                                                                }
+                                                            />
+                                                            {isNext() &&
+                                                                !isLive() && (
+                                                                    <span
+                                                                        classList={{
+                                                                            countdown: true,
+                                                                            timeout:
+                                                                                props.timedOut() &&
+                                                                                !props.isFresh() &&
+                                                                                !isPast(),
+                                                                            updated:
+                                                                                props.isFresh() &&
+                                                                                props
+                                                                                    .changedKeys()
+                                                                                    .has(
+                                                                                        getKey(
+                                                                                            e,
+                                                                                        ),
                                                                                     ),
-                                                                                ),
-                                                                    }}
-                                                                >
-                                                                    {props.timedOut() &&
-                                                                    !isPast()
-                                                                        ? "⚠ "
-                                                                        : " "}
-                                                                    {formatRelative(
-                                                                        e.start.getTime() -
+                                                                        }}
+                                                                    >
+                                                                        {props.timedOut() &&
+                                                                            !isPast()
+                                                                            ? "⚠ "
+                                                                            : " "}
+                                                                        {formatRelative(
+                                                                            e.start.getTime() -
                                                                             now().getTime(),
-                                                                    )}
-                                                                </span>
-                                                            )}
-                                                        {/* </div> */}
+                                                                        )}
+                                                                    </span>
+                                                                )}
+                                                        </div>
                                                         {e.speakerTitle && (
-                                                            <div class="speaker-title">
-                                                                <RenderWithBreaks
-                                                                    text={
-                                                                        e.speakerTitle
-                                                                    }
-                                                                />
-                                                            </div>
+                                                            <RenderWithBreaks
+                                                                e={e}
+                                                                property="speakerTitle"
+                                                                timedOut={() =>
+                                                                    props.timedOut()
+                                                                }
+                                                                isFresh={() =>
+                                                                    props.isFresh()
+                                                                }
+                                                                isPast={() =>
+                                                                    now() > e.end
+                                                                }
+                                                                changedKeys={() =>
+                                                                    props.changedKeys()
+                                                                }
+                                                            />
                                                         )}
                                                     </>
                                                 ) : (
@@ -1210,12 +1306,12 @@ export default function App() {
                                                                     }}
                                                                 >
                                                                     {props.timedOut() &&
-                                                                    !isPast()
+                                                                        !isPast()
                                                                         ? "⚠ "
                                                                         : " "}
                                                                     {formatRelative(
                                                                         e.start.getTime() -
-                                                                            now().getTime(),
+                                                                        now().getTime(),
                                                                     )}
                                                                 </span>
                                                             )}
@@ -1239,29 +1335,29 @@ export default function App() {
                                                     }}
                                                 >
                                                     {props.timedOut() &&
-                                                    !isPast()
+                                                        !isPast()
                                                         ? "⚠ "
                                                         : " "}
                                                     {e.isExplicitEnd
                                                         ? (USER_TZ === TIMEZONE
-                                                              ? timeFormatter
-                                                              : timeFormatterWithTZ
-                                                          ).formatRange(
-                                                              e.start,
-                                                              e.end,
-                                                          )
+                                                            ? timeFormatter
+                                                            : timeFormatterWithTZ
+                                                        ).formatRange(
+                                                            e.start,
+                                                            e.end,
+                                                        )
                                                         : (USER_TZ === TIMEZONE
-                                                              ? timeFormatter
-                                                              : timeFormatterWithTZ
-                                                          ).format(
-                                                              e.start,
-                                                          )}{" "}
+                                                            ? timeFormatter
+                                                            : timeFormatterWithTZ
+                                                        ).format(
+                                                            e.start,
+                                                        )}{" "}
                                                     {e.isExplicitEnd && (
                                                         <span class="duration">
                                                             {"("}
                                                             {formatDuration(
                                                                 e.end.getTime() -
-                                                                    e.start.getTime(),
+                                                                e.start.getTime(),
                                                             )}
                                                             {")"}
                                                         </span>
@@ -1269,6 +1365,7 @@ export default function App() {
                                                 </span>
                                                 <Location
                                                     e={e}
+                                                    property="location"
                                                     timedOut={() =>
                                                         props.timedOut()
                                                     }
@@ -1295,19 +1392,19 @@ export default function App() {
                             onClick={() => {
                                 document.querySelector(".event.live")
                                     ? document
-                                          .querySelector(".event.live")
-                                          ?.scrollIntoView({
-                                              behavior: "smooth",
-                                              block: "center",
-                                          })
+                                        .querySelector(".event.live")
+                                        ?.scrollIntoView({
+                                            behavior: "smooth",
+                                            block: "center",
+                                        })
                                     : document
-                                          .querySelector(
-                                              ".event:has(.countdown)",
-                                          )
-                                          ?.scrollIntoView({
-                                              behavior: "smooth",
-                                              block: "center",
-                                          });
+                                        .querySelector(
+                                            ".event:has(.countdown)",
+                                        )
+                                        ?.scrollIntoView({
+                                            behavior: "smooth",
+                                            block: "center",
+                                        });
                             }}
                         >
                             <button

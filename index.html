@@ -353,6 +353,7 @@
                 .countdown.skeleton,
                 .location.skeleton,
                 .order.skeleton,
+                .speakerTitle > span.skeleton,
                 .tooltip {
                     border-radius: 6lh !important;
                 }
@@ -400,6 +401,20 @@
                 box-shadow: 0px 0.1545cap 0.618em black;
             }
 
+            .speakerTitle > span:only-of-type > .tooltip {
+                white-space: normal;
+            }
+
+            .speakerTitle .tooltip {
+                inset-inline-end: unset;
+                inset-inline-start: 0;
+            }
+
+            .speaker-domain .tooltip {
+                inset-inline-end: 0;
+                inset-inline-start: unset;
+            }
+
             /* .order .tooltip {
                 color: var(--text);
             } */
@@ -426,7 +441,8 @@
             .time,
             .countdown,
             .location,
-            .order {
+            .order,
+            .speakerTitle > span {
                 position: relative;
                 unicode-bidi: plaintext;
                 transition:
@@ -491,6 +507,14 @@
                 font-weight: bold;
             }
 
+            /* .speakerTitle > span {
+                display: inline-block;
+            } */
+
+            /* .speakerTitle:has(.speaker-title) {
+                display: block;
+            } */
+
             .duration,
             .speaker-domain {
                 color: var(--header);
@@ -500,7 +524,8 @@
             .time.timeout,
             .countdown.timeout,
             .location.timeout,
-            .order.timeout {
+            .order.timeout,
+            .speakerTitle > span.timout {
                 opacity: 0.618;
                 font-style: italic;
                 color: var(--header);
@@ -510,7 +535,8 @@
             .time.updated,
             .countdown.updated,
             .location.updated,
-            .order.updated {
+            .order.updated,
+            .speakerTitle > span.updated {
                 animation: pulse 1.618s ease-in-out 1;
             }
 
