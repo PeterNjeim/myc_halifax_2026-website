@@ -14,6 +14,11 @@ import {
 } from "solid-js";
 import fallbackData from "./assets/schedule.json";
 import { Transition } from "solid-transition-group";
+const images = import.meta.glob('./assets/imgs/*.{png,jpg,jpeg,svg,webp}', { eager: true });
+
+const getImageSrc = (filename: string) => {
+    return images[`./assets/imgs/${filename}`]?.default || "";
+}
 
 // Basic runtime constants and helpers (kept minimal so file compiles).
 type RawEvent = {
@@ -1549,16 +1554,16 @@ export default function App() {
     function SponsorsView() {
         const provider = createSheetProvider({
             view: "sponsors",
-            columns: ["name", "level", "logo", "url"],
+            columns: ["name", "level", "logo", "file", "url"],
         });
         onMount(() => provider.init());
         onCleanup(() => provider.cleanup());
         return (
-            <div>
-                <h1>
+            <>
+                {/* <h1>
                     Sponsors{" "}
                     {provider.timedOut() && !provider.isFresh() ? "⚠ " : ""}
-                </h1>
+                </h1> */}
                 {/* <Suspense fallback={<div>Loading…</div>}>
                     <SheetView
                         view="sponsors"
@@ -1566,26 +1571,28 @@ export default function App() {
                     />
                 </Suspense> */}
 
-                <div class="sponsors-grid">
-                    <For each={provider.rows()}>
-                        {(r) => (
-                            <div class="sponsor">
-                                <div class="level">{r.level}</div>
+
+                <For each={provider.rows()}>
+                    {(r) => (
+                        <>
+                            <h2 class="level">{r.level}</h2>
+                            <div class={"sponsor " + r.level}>
                                 <a
                                     href={r.url || "#"}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                 >
                                     <img
-                                        src={r.logo || ""}
+                                        src={getImageSrc(r.file) || ""}
                                         alt={r.name || "sponsor"}
                                     />
                                 </a>
                             </div>
-                        )}
-                    </For>
-                </div>
-            </div>
+                        </>
+                    )}
+                </For>
+
+            </>
         );
     }
 
