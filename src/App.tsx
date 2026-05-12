@@ -259,6 +259,69 @@ function abbreviateLocation(name: string): string {
     //     .join("");
 }
 
+function normalizeForSearch(value?: string): string {
+    return String(value ?? "")
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLowerCase();
+}
+
+function compactForSearch(value?: string): string {
+    return normalizeForSearch(value).replace(/\s+/g, "");
+}
+
+function splitSearchWords(value?: string): string[] {
+    return normalizeForSearch(value).split(" ").filter(Boolean);
+}
+
+function levenshteinDistance(a: string, b: string): number {
+    const al = a.length;
+    const bl = b.length;
+    if (!al) return bl;
+    if (!bl) return al;
+
+    const row = new Array<number>(bl + 1);
+    const prev = new Array<number>(bl + 1);
+
+    for (let j = 0; j <= bl; j++) {
+        prev[j] = j;
+    }
+
+    for (let i = 1; i <= al; i++) {
+        row[0] = i;
+        for (let j = 1; j <= bl; j++) {
+            const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+            row[j] = Math.min(
+                prev[j] + 1,
+                row[j - 1] + 1,
+                prev[j - 1] + cost,
+            );
+        }
+        for (let j = 0; j <= bl; j++) {
+            prev[j] = row[j];
+        }
+    }
+
+    return row[bl];
+}
+
+function searchScore(text: string, query: string): number {
+    if (!text || !query) return 0;
+
+    if (text === query) return 1000000;
+    const index = text.indexOf(query);
+    if (index >= 0) return 100000 - index;
+
+    if (query.length <= 1) return 0;
+    const distance = levenshteinDistance(text, query);
+    const maxDistance = Math.max(1, Math.floor(query.length * 0.25));
+    if (distance > maxDistance) return 0;
+
+    return Math.max(1, Math.floor((query.length - distance) * 1000));
+}
+
 function Location(props: {
     e: Event;
     property: string;
@@ -835,7 +898,7 @@ export default function App() {
 
         requestAnimationFrame(() => {
             fitToWidth(
-                classes ?? ".tile-text, .center h1, .day h2, .honorific, .name-line, .speakerTitle, .details",
+                classes ?? ".tile-text, .center h1, .day h2, .title, .honorific, .name-line, .speakerTitle, .details, .gala-results-header, .gala-results-item",
                 willAnimate,
             );
             window.scrollTo(scrollX, scrollY);
@@ -1511,19 +1574,173 @@ export default function App() {
             view: "gala",
             columns: ["name", "table"],
         });
+        const [query, setQuery] = createSignal("");
+        const normalizedQuery = createMemo(() => normalizeForSearch(query()));
+
+        const results = createMemo(() => {
+            const normalized = normalizedQuery();
+            if (!normalized) return [] as {
+                row: Record<string, any>;
+                score: number;
+                exactFirst: boolean;
+                exactLast: boolean;
+                exactFull: boolean;
+            }[];
+
+            const compactQuery = compactForSearch(normalized);
+            const queryWords = splitSearchWords(normalized);
+
+            return provider
+                .rows()
+                .map((row) => {
+                    const normalizedName = normalizeForSearch(row.name);
+                    const compactName = compactForSearch(normalizedName);
+                    const nameWords = splitSearchWords(normalizedName);
+                    const firstName = nameWords[0] || "";
+                    const lastName = nameWords[nameWords.length - 1] || "";
+
+                    const exactFirst = Boolean(
+                        firstName &&
+                        (queryWords.includes(firstName) ||
+                            compactQuery.startsWith(firstName) ||
+                            compactQuery.endsWith(firstName)),
+                    );
+                    const exactLast = Boolean(
+                        lastName &&
+                        (queryWords.includes(lastName) ||
+                            compactQuery.startsWith(lastName) ||
+                            compactQuery.endsWith(lastName)),
+                    );
+                    const exactFull =
+                        normalizedName === normalized || compactName === compactQuery;
+
+                    const wordScores = queryWords.flatMap((queryWord) =>
+                        nameWords.map((nameWord) =>
+                            searchScore(nameWord, queryWord),
+                        ),
+                    );
+                    const bestWordScore = wordScores.length
+                        ? Math.max(...wordScores)
+                        : 0;
+
+                    const score = Math.max(
+                        searchScore(normalizedName, normalized),
+                        searchScore(compactName, compactQuery),
+                        bestWordScore,
+                    );
+
+                    const priority = exactFirst ? 3 : exactLast ? 2 : 1;
+
+                    return {
+                        row,
+                        score,
+                        exactFirst,
+                        exactLast,
+                        exactFull,
+                        priority,
+                    };
+                })
+                .filter((item) => {
+                    if (item.exactFull || item.exactFirst || item.exactLast) {
+                        return true;
+                    }
+
+                    if (normalized.length < 3) return false;
+                    return item.score > 0;
+                })
+                .sort((a, b) => {
+                    if (a.priority !== b.priority) return b.priority - a.priority;
+                    if (a.score !== b.score) return b.score - a.score;
+                    return String(a.row.name).localeCompare(String(b.row.name));
+                })
+                .slice(0, 6);
+        });
+
+        const bestMatch = createMemo(() =>
+            results().find((item) => item.exactFirst || item.exactLast) ?? null,
+        );
+
+        const showBestMatch = createMemo(() => Boolean(bestMatch()));
+
+        const hint = createMemo(() => {
+            if (provider.loading()) return "Loading gala seating…";
+            if (!provider.rows().length) return "Gala seating data not available yet.";
+            if (!normalizedQuery()) return "";
+            if (normalizedQuery().length < 3 && !showBestMatch()) {
+                return "Type 3+ characters to search.";
+            }
+            return results().length
+                ? ""
+                : "No matching name found. Try a different spelling.";
+        });
+
+        createRenderEffect(() => {
+            results();
+            runFit(".center h1, .gala-results-header, .gala-results-item", false);
+            window.setTimeout(() => {
+                runFit();
+            }, 382);
+
+        })
+
         onMount(() => provider.init());
         onCleanup(() => provider.cleanup());
+
         return (
-            <div>
-                <h1>
-                    Gala Seating{" "}
-                    {provider.timedOut() && !provider.isFresh() ? "⚠ " : ""}
-                </h1>
-                <Suspense fallback={<div>Loading…</div>}>
-                    <SheetView view="gala" columns={["name", "table"]} />
-                </Suspense>
-                <div class="skeleton">Customize gala UI here.</div>
-            </div>
+            <>
+                <form
+                    class="gala-search"
+                    onSubmit={(event) => event.preventDefault()}
+                >
+                    {/* <label for="gala-search-input">Find your table</label> */}
+                    <input
+                        id="gala-search-input"
+                        type="search"
+                        inputMode="search"
+                        autocomplete="off"
+                        autocapitalize="words"
+                        spellcheck="false"
+                        placeholder="Enter your name"
+                        value={query()}
+                        onInput={(event) =>
+                            setQuery(
+                                (event.currentTarget as HTMLInputElement).value,
+                            )
+                        }
+                    />
+                    {/* <Show when={hint()}><p class="gala-hint">{hint()}</p></Show> */}
+                </form>
+
+                <Show when={!provider.loading() && normalizedQuery()}>
+                    <Show
+                        when={results().length > 0}
+                    >
+                        <div class="gala-results">
+                            <div class="gala-results-header">
+                                <span>Name</span>
+                                <span>Table</span>
+                            </div>                            <For
+                                each={results().find((i) => i.exactFull) ? [results().find((i) => i.exactFull)!] :
+                                    results()
+                                }
+                            >
+                                {(item) => (
+                                    <div classList={{ "gala-results-item": true, "gala-exact-result": item.exactFull }}>
+                                        <span>{item.row.name}</span>
+                                        <span>{item.row.table || "—"}</span>
+                                    </div>
+                                )}
+                            </For>
+                        </div>
+                    </Show>
+                    <Show
+                        when={results().length === 0 && normalizedQuery().length >= 3}
+                    >
+                        <div class="gala-results-empty">No seat found.</div>
+                    </Show>
+
+                </Show>
+            </>
         );
     }
 
