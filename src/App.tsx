@@ -898,7 +898,7 @@ export default function App() {
 
         requestAnimationFrame(() => {
             fitToWidth(
-                classes ?? ".tile-text, .center h1, .day h2, .title, .honorific, .name-line, .speakerTitle, .details, .gala-results-header, .gala-results-item",
+                classes ?? ".tile-text, .center h1, .day h2, .title, .honorific, .name-line, .speakerTitle, .details",
                 willAnimate,
             );
             window.scrollTo(scrollX, scrollY);
@@ -1656,33 +1656,6 @@ export default function App() {
                 .slice(0, 6);
         });
 
-        const bestMatch = createMemo(() =>
-            results().find((item) => item.exactFirst || item.exactLast) ?? null,
-        );
-
-        const showBestMatch = createMemo(() => Boolean(bestMatch()));
-
-        const hint = createMemo(() => {
-            if (provider.loading()) return "Loading gala seating…";
-            if (!provider.rows().length) return "Gala seating data not available yet.";
-            if (!normalizedQuery()) return "";
-            if (normalizedQuery().length < 3 && !showBestMatch()) {
-                return "Type 3+ characters to search.";
-            }
-            return results().length
-                ? ""
-                : "No matching name found. Try a different spelling.";
-        });
-
-        createRenderEffect(() => {
-            results();
-            runFit(".center h1, .gala-results-header, .gala-results-item", false);
-            window.setTimeout(() => {
-                runFit();
-            }, 382);
-
-        })
-
         onMount(() => provider.init());
         onCleanup(() => provider.cleanup());
 
@@ -1692,7 +1665,6 @@ export default function App() {
                     class="gala-search"
                     onSubmit={(event) => event.preventDefault()}
                 >
-                    {/* <label for="gala-search-input">Find your table</label> */}
                     <input
                         id="gala-search-input"
                         type="search"
@@ -1708,7 +1680,6 @@ export default function App() {
                             )
                         }
                     />
-                    {/* <Show when={hint()}><p class="gala-hint">{hint()}</p></Show> */}
                 </form>
 
                 <Show when={!provider.loading() && normalizedQuery()}>
@@ -1941,22 +1912,6 @@ export default function App() {
             window.removeEventListener("scroll", checkPosition);
             resizeObserver.disconnect();
         };
-    });
-
-    const nextEvent = createMemo(() =>
-        events().find((e) => e.start.getTime() > nowTime()),
-    );
-
-    const grouped = createMemo(() => {
-        const map = new Map<string, Event[]>();
-
-        for (const e of events()) {
-            const key = keyFormatter.format(e.start);
-            if (!map.has(key)) map.set(key, []);
-            map.get(key)!.push(e);
-        }
-
-        return Array.from(map.entries());
     });
 
     createRenderEffect(() => {
