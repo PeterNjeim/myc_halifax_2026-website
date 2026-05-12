@@ -898,7 +898,7 @@ export default function App() {
 
         requestAnimationFrame(() => {
             fitToWidth(
-                classes ?? ".tile-text, .center h1, .day h2, .title, .honorific, .name-line, .speakerTitle, .details",
+                classes ?? ".tile-text, .center h1, .day h2, .title:not(:has(> div)), .honorific, .name-line, .speakerTitle, .details",
                 willAnimate,
             );
             window.scrollTo(scrollX, scrollY);
