@@ -50,7 +50,7 @@
             type="font/woff2"
             crossorigin="anonymous"
         />
-        <script id="__SCHEDULE__" type="application/json">[{"title":"Registration","start":"2026-05-15 04:00 p.m.","end":"2026-05-15 07:00 p.m.","location":"Our Lady of Lebanon Parish Lobby"},{"title":"Rosary Building Activity & Dinner","start":"2026-05-15 07:00 p.m.","end":"2026-05-15 11:00 p.m.","location":"Cedar Event Centre"},{},{"title":"Welcome Ceremony","start":"2026-05-16 09:00 a.m.","end":"2026-05-16 10:30 a.m.","location":"Cedar Event Centre"},{"title":"Keynote Speakers","start":"2026-05-16 10:30 a.m.","end":"2026-05-16 12:00 p.m.","location":"Our Lady of Lebanon Church"},{"title":"Lunch","start":"2026-05-16 12:00 p.m.","end":"2026-05-16 01:30 p.m.","location":"Cedar Event Centre"},{"title":"Spiritual Workshops & Adoration","start":"2026-05-16 01:30 p.m.","end":"2026-05-16 03:30 p.m.","location":"Our Lady of Lebanon Parish"},{"title":"Halifax Harbour Boat Party & Dinner","start":"2026-05-16 09:00 p.m.","end":"","location":"Halifax Waterfront"},{},{"title":"Mass","start":"2026-05-17 10:00 a.m.","end":"2026-05-17 11:30 a.m.","location":"Our Lady of Lebanon Church"},{"title":"Shuttles to Downtown Halifax","start":"2026-05-17 12:30 p.m.","end":"2026-05-17 01:30 p.m.","location":"Our Lady of Lebanon Parish Entrance"},{"title":"Amazing Race","start":"2026-05-17 01:30 p.m.","end":"2026-05-17 05:00 p.m.","location":"Downtown Halifax"},{"title":"Gala Dinner","start":"2026-05-17 08:30 p.m.","end":"","location":"Cedar Event Centre"}]</script>
+        <script id="__SCHEDULE__" type="application/json">[{"title":"Registration is open","start":"2026-05-15 04:00 p.m.","end":"2026-05-15 07:00 p.m.","location":"Our Lady of Lebanon Parish Entrance"},{"title":"Dinner throughout the Evening","start":"2026-05-15 07:00 p.m.","end":"","location":"Cedar Event Centre"},{"title":"Rosary Building Activities","start":"2026-05-15 07:00 p.m.","end":"2026-05-15 11:00 p.m.","location":"Cedar Event Centre"},{"title":"End of Activities","start":"2026-05-15 11:00 p.m."},{},{"title":"Opening Ceremony","start":"2026-05-16 09:00 a.m.","end":"2026-05-16 10:00 a.m.","location":"Cedar Event Centre"},{"title":"Break + Snack","start":"2026-05-16 10:00 a.m.","end":"2026-05-16 10:30 a.m.","location":"Our Lady of Lebanon Parish & Surrounding Area"},{"title":"Keynote Speakers","start":"2026-05-16 10:30 a.m.","end":"2026-05-16 12:00 p.m.","location":"Our Lady of Lebanon Church"},{"title":"Lunch","start":"2026-05-16 12:00 p.m.","end":"2026-05-16 01:30 p.m.","location":"Saint Charbel Tent"},{"title":"Workshop","start":"2026-05-16 01:30 p.m.","end":"2026-05-16 03:30 p.m.","location":"Our Lady of Lebanon Parish & Surrounding Area"},{"title":"Adoration + Confession","start":"2026-05-16 03:30 p.m.","end":"2026-05-16 05:00 p.m.","location":"Our Lady of Lebanon Parish & Surrounding Area"},{"title":"Mother Mary Procession","start":"2026-05-16 05:00 p.m.","end":"2026-05-16 06:00 p.m.","location":"Our Lady of Lebanon Parish & Surrounding Area"},{"title":"Supper + Gathering","start":"2026-05-16 06:00 p.m.","end":"2026-05-16 07:30 p.m.","location":"Cedar Event Centre"},{"title":"Halifax Harbour Party Boats","start":"2026-05-16 08:30 p.m.","end":"2026-05-16 11:00 p.m.","location":"Halifax Waterfront"},{},{"title":"Mass","start":"2026-05-17 10:00 a.m.","end":"2026-05-17 12:00 p.m.","location":"Our Lady of Lebanon Church"},{"title":"Lunch","start":"2026-05-17 12:00 p.m.","end":"2026-05-17 01:00 p.m.","location":"Cedar Event Centre"},{"title":"Group Picture","start":"2026-05-17 02:00 p.m.","end":"2026-05-17 02:30 p.m.","location":"Downtown Halifax"},{"title":"Downtown Activity","start":"2026-05-17 02:30 p.m.","end":"2026-05-17 05:00 p.m.","location":"Downtown Halifax"},{"title":"Break","start":"2026-05-17 05:00 p.m.","end":"2026-05-17 07:00 p.m.","location":"Downtown Halifax"},{"title":"Cocktail","start":"2026-05-17 07:30 p.m.","end":"2026-05-17 08:30 p.m.","location":"Cedar Event Centre"},{"title":"Gala Dinner","start":"2026-05-17 08:30 p.m.","end":"2026-05-18 02:00 a.m.","location":"Cedar Event Centre"},{"title":"End of Activities","start":"2026-05-18 02:00 a.m.","end":"","location":"Enjoy Halifax, Safe Travels!"}]</script>
         <style>
             @font-face {
                 font-family: "Merriweather";
@@ -427,15 +427,12 @@
             @supports (corner-shape: superellipse(2.131)) {
                 .tile,
                 .event,
-                .time.skeleton,
-                .countdown.skeleton,
-                .location.skeleton,
-                .order.skeleton,
-                .speakerTitle > span.skeleton,
+                .skeleton,
                 .tooltip,
                 .sponsor img,
                 .gala-search input,
-                .gala-results-item {
+                .biography,
+                .gala-results-item span:nth-child(2) {
                     border-radius: 6lh !important;
                 }
             }
@@ -490,7 +487,9 @@
                 white-space: normal;
             }
 
-            .speakerTitle .tooltip {
+            .speakerTitle .tooltip,
+            .event-title .tooltip,
+            .pickup .tooltip {
                 inset-inline-end: unset;
                 inset-inline-start: 0;
             }
@@ -526,8 +525,11 @@
             .time,
             .countdown,
             .location,
+            .event-title,
+            .pickup,
             .order,
             .speakerTitle > span,
+            .biography,
             .gala-results-item span:nth-child(2) {
                 position: relative;
                 unicode-bidi: plaintext;
@@ -582,6 +584,7 @@
             }
 
             .location,
+            .biography,
             .gala-results-item span:nth-child(2) {
                 color: var(--header);
                 font-style: italic;
@@ -654,22 +657,14 @@
                 font-style: italic;
             }
 
-            .time.timeout,
-            .countdown.timeout,
-            .location.timeout,
-            .order.timeout,
-            .speakerTitle > span.timout {
+            .timeout {
                 opacity: 0.618;
                 font-style: italic;
                 color: var(--header);
                 animation: pulse 1.618s ease-in-out 1;
             }
 
-            .time.updated,
-            .countdown.updated,
-            .location.updated,
-            .order.updated,
-            .speakerTitle > span.updated {
+            .updated {
                 animation: pulse 1.618s ease-in-out 1;
             }
 
@@ -833,15 +828,19 @@
                 padding: 0 calc(1em / 3);
             }
 
+            .biography,
             .gala-results-item span:nth-child(2) {
                 font-style: normal;
                 font-weight: bold;
                 background-color: var(--bg);
-                border-radius: 99999px;
                 padding: 0 0.309em;
                 corner-shape: superellipse(2.131);
+                border-radius: 6px;
+                font-variant-emoji: text;
             }
 
+            .event-title,
+            .pickup,
             .gala-exact-result {
                 font-weight: bold;
             }
