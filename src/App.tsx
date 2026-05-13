@@ -659,7 +659,7 @@ function Home(props: { setView: (arg0: string) => void }) {
                 onClick={() => props.setView("contact")}
             />
             <Tile
-                label="Speaker Info"
+                label="Guest Speakers"
                 onClick={() => props.setView("speakers")}
             />
             <Tile label="Sponsors" onClick={() => props.setView("sponsors")} />
@@ -761,7 +761,7 @@ function InlineSheet(props: { view: string; columns: string[] }) {
         shuttles: "Shuttle Schedule",
         gala: "Gala Seating",
         contact: "Emergency Contacts",
-        speakers: "Speaker Info",
+        speakers: "Guest Speakers",
         sponsors: "Sponsors",
     };
 
@@ -860,7 +860,7 @@ export default function App() {
         shuttles: "Shuttle Schedule",
         gala: "Gala Seating",
         contact: "Emergency Contacts",
-        speakers: "Speaker Info",
+        speakers: "Guest Speakers",
         sponsors: "Sponsors",
     };
     const inline = getInlineData();
