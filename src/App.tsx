@@ -10,18 +10,22 @@ import {
     Match,
     Switch,
 } from "solid-js";
-import fallbackData from "./assets/schedule.json";
 import { Transition } from "solid-transition-group";
-const images = import.meta.glob('./assets/imgs/*.{png,jpg,jpeg,svg,webp}', { eager: true });
-const pdfs = import.meta.glob('./assets/pdfs/*.pdf', { eager: true });
+const images = import.meta.glob("./assets/imgs/*.{png,jpg,jpeg,svg,webp}", {
+    eager: true,
+}) as Record<string, { default: string }>;
+const pdfs = import.meta.glob("./assets/pdfs/*.pdf", { eager: true }) as Record<
+    string,
+    { default: string }
+>;
 
 const getImageSrc = (filename: string) => {
     return images[`./assets/imgs/${filename}`]?.default || "";
-}
+};
 
 const getPdfSrc = (filename: string) => {
     return pdfs[`./assets/pdfs/${filename}`]?.default || "";
-}
+};
 
 // Basic runtime constants and helpers (kept minimal so file compiles).
 type RawEvent = {
@@ -47,7 +51,18 @@ type Event = {
 const TIMEZONE = "America/Halifax";
 const OFFSET = "-03:00";
 const USER_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
-const STORAGE_KEY = "schedule";
+const SHEET_STORAGE_PREFIX = "sheet:";
+const SHEET_VIEW_IDS = [
+    "schedule",
+    "shuttles",
+    "gala",
+    "contact",
+    "speakers",
+    "sponsors",
+] as const;
+
+type SheetView = (typeof SHEET_VIEW_IDS)[number];
+
 const LOCALE: string | string[] =
     navigator.language === "en-CA"
         ? Intl.DateTimeFormat().resolvedOptions().locale.startsWith("en")
@@ -55,8 +70,12 @@ const LOCALE: string | string[] =
             : []
         : [];
 
-function getInlineData(): RawEvent[] | null {
-    const el = document.getElementById("__SCHEDULE__");
+function sheetStorageKey(sheetView: SheetView) {
+    return `${SHEET_STORAGE_PREFIX}${sheetView}`;
+}
+
+function getInlineSheetData(sheetView: SheetView): RawEvent[] | null {
+    const el = document.getElementById(`__${sheetView.toUpperCase()}__`);
     if (!el) return null;
 
     try {
@@ -66,16 +85,18 @@ function getInlineData(): RawEvent[] | null {
     }
 }
 
-function getStored(): RawEvent[] | null {
+function getStoredSheetData(sheetView: SheetView): RawEvent[] | null {
     try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY) || "");
+        return JSON.parse(
+            localStorage.getItem(sheetStorageKey(sheetView)) || "",
+        );
     } catch {
         return null;
     }
 }
 
-function setStored(data: RawEvent[]) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+function setStoredSheetData(sheetView: SheetView, data: RawEvent[]) {
+    localStorage.setItem(sheetStorageKey(sheetView), JSON.stringify(data));
 }
 
 // --- Parsing ---
@@ -168,7 +189,7 @@ function formatDuration(ms: number): string {
 function RenderWithBreaks(props: {
     e: Event;
     property: string;
-    timedOut: () => boolean;
+    localeText: {};
     isFresh: () => boolean;
     isPast: () => boolean;
     changedKeys: () => Set<string>;
@@ -183,57 +204,36 @@ function RenderWithBreaks(props: {
                     {/* {i > 0 && <br />}{" "} */}
                     {p.includes(",") ? (
                         <>
-                            <Location e={props.e}
+                            <Location
+                                e={props.e}
                                 property="speakerTitle"
                                 part={0}
                                 index={i}
-                                timedOut={() =>
-                                    props.timedOut()
-                                }
-                                isFresh={() =>
-                                    props.isFresh()
-                                }
-                                isPast={() =>
-                                    props.isPast()
-                                }
-                                changedKeys={() =>
-                                    props.changedKeys()
-                                }
+                                localeText={props.localeText}
+                                isFresh={() => props.isFresh()}
+                                isPast={() => props.isPast()}
+                                changedKeys={() => props.changedKeys()}
                             />
                             {", "}
-                            <Location e={props.e}
+                            <Location
+                                e={props.e}
                                 property="speakerTitle"
                                 part={1}
                                 index={i}
-                                timedOut={() =>
-                                    props.timedOut()
-                                }
-                                isFresh={() =>
-                                    props.isFresh()
-                                }
-                                isPast={() =>
-                                    props.isPast()
-                                }
-                                changedKeys={() =>
-                                    props.changedKeys()
-                                }
+                                localeText={props.localeText}
+                                isFresh={() => props.isFresh()}
+                                isPast={() => props.isPast()}
+                                changedKeys={() => props.changedKeys()}
                             />
                         </>
                     ) : (
-                        <Location e={props.e}
+                        <Location
+                            e={props.e}
                             property="speakerTitle"
-                            timedOut={() =>
-                                props.timedOut()
-                            }
-                            isFresh={() =>
-                                props.isFresh()
-                            }
-                            isPast={() =>
-                                props.isPast()
-                            }
-                            changedKeys={() =>
-                                props.changedKeys()
-                            }
+                            localeText={props.localeText}
+                            isFresh={() => props.isFresh()}
+                            isPast={() => props.isPast()}
+                            changedKeys={() => props.changedKeys()}
                         />
                     )}
                 </div>
@@ -252,6 +252,7 @@ function abbreviateLocation(name: string): string {
         .replace("Order of Prince Edward Island", "O.P.E.I.")
         .replace("Antonine Maronite Order", "O.A.M.")
         .replace("Prince Edward Island", "P.E.I.")
+        .replace("Member of the Order of Canada", "C.M.")
         .replace("St. Isaiah Monastery, Rome, Italy", "St. Isaiah Monastery")
         .replace("Former", "Fmr.")
         .replace("President", "Pres.")
@@ -299,11 +300,7 @@ function levenshteinDistance(a: string, b: string): number {
         row[0] = i;
         for (let j = 1; j <= bl; j++) {
             const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-            row[j] = Math.min(
-                prev[j] + 1,
-                row[j - 1] + 1,
-                prev[j - 1] + cost,
-            );
+            row[j] = Math.min(prev[j] + 1, row[j - 1] + 1, prev[j - 1] + cost);
         }
         for (let j = 0; j <= bl; j++) {
             prev[j] = row[j];
@@ -333,31 +330,69 @@ function Location(props: {
     property: string;
     part?: number;
     index?: number;
-    timedOut: () => boolean;
+    localeText: {},
     isFresh: () => boolean;
     isPast: () => boolean;
     changedKeys: () => Set<string>;
 }) {
     const [open, setOpen] = createSignal(false);
     // const [isAbbreviated, setIsAbbreviated] = createSignal(false);
+    const [tooltipSide, setTooltipSide] = createSignal<
+        "center" | "start" | "end"
+    >("center");
+    const [multiLine, setMultiLine] = createSignal(false);
     const [isDesktop, setIsDesktop] = createSignal(false);
     let text = props.e[props.property];
     if (props.property === "title" && props.part === 3) {
-        text = "To: " + text;
+        text = props.localeText.to + ": " + text;
     }
     if (props.property === "location" && props.part === 3) {
-        text = "From: " + text;
+        text = props.localeText.from + ": " + text;
     }
     if (props.index !== undefined) {
         const parts = props.e[props.property]!.split("\\n");
         const p = parts[props.index];
-        text = !props.part ? p.slice(0, p.indexOf(",")) : p.slice(p.indexOf(",") + 1)
+        text = !props.part
+            ? p.slice(0, p.indexOf(","))
+            : p.slice(p.indexOf(",") + 1);
     }
     let abbr = abbreviateLocation(text);
 
     let timeout: NodeJS.Timeout;
     let locationEl: HTMLElement | undefined;
+    let tooltipEl: HTMLElement | undefined;
     // let observer: MutationObserver | undefined;
+
+    const updateTooltipSide = () => {
+        if (!locationEl) return;
+        const locationRect = locationEl.getBoundingClientRect();
+        const viewportWidth = document.documentElement.clientWidth;
+        const textCenter = locationRect.left + locationRect.width / 2;
+        const minDist = Math.min(textCenter, viewportWidth - textCenter);
+
+        // Measure tooltip width using a temporary element
+        const tempEl = document.createElement("span");
+        tempEl.className = "tooltip";
+        tempEl.style.position = "absolute";
+        tempEl.style.visibility = "hidden";
+        tempEl.style.whiteSpace = "nowrap";
+        tempEl.textContent = text;
+        document.body.appendChild(tempEl);
+        const tooltipWidth = tempEl.offsetWidth;
+        document.body.removeChild(tempEl);
+
+        // Logic
+        let side: "center" | "start" | "end" = "center";
+        let multi = false;
+        if (tooltipWidth > viewportWidth) {
+            multi = true;
+        }
+        if (tooltipWidth > 2 * minDist) {
+            side = textCenter < viewportWidth / 2 ? "start" : "end";
+        }
+        setTooltipSide(side);
+        setMultiLine(multi);
+    };
 
     onMount(() => {
         const mq = window.matchMedia("(hover: hover)");
@@ -365,59 +400,63 @@ function Location(props: {
 
         locationEl?.addEventListener("click", (event) => {
             event.stopPropagation();
-        })
+        });
 
         document.addEventListener("click", (event) => {
             if (!locationEl!.contains(event.target as Node)) {
-                setOpen(false)
+                setOpen(false);
             }
         });
-
-        // if (
-        //     text.includes("Our Lady of Lebanon") ||
-        //     text.includes("Cedar Event Centre") ||
-        //     text.includes(
-        //         "Order of Prince Edward Island",
-        //     ) ||
-        //     text.includes("Antonine Maronite Order")
-        // ) {
-        // if (!locationEl) return;
-        // setIsAbbreviated(locationEl.textContent === abbr);
-
-        // observer = new MutationObserver(() => {
-        //     if (!locationEl) return;
-        //     setIsAbbreviated(locationEl.textContent === abbr);
-        // });
-
-        // observer.observe(locationEl, {
-        //     childList: true,
-        // });
-        // }
     });
 
-    // onCleanup(() => observer?.disconnect());
+    createRenderEffect(() => {
+        if (open()) updateTooltipSide();
+    });
 
     return (
         <span
             classList={{
-                [props.property]: (props.property !== "speakerTitle" && props.property !== "title") ? true : false,
+                [props.property]:
+                    props.property !== "speakerTitle" &&
+                        props.property !== "title"
+                        ? true
+                        : false,
                 pickup: props.property === "title" && props.part === 3,
                 "event-title": props.property === "title" && props.part === 4,
                 "speaker-title": props.part === 0,
                 "speaker-domain": props.part === 1,
                 "no-abbr": text === abbr,
-                timeout:
-                    props.timedOut() && !props.isFresh() && !props.isPast(),
                 updated:
                     props.isFresh() && props.changedKeys().has(getKey(props.e)),
             }}
             tabIndex={0}
-            onMouseEnter={(el) => (isDesktop() ? setOpen(el.target.classList.contains("abbreviated")) : null)}
+            onMouseEnter={(el) => {
+                if (!isDesktop()) return;
+                if (
+                    (el.target as HTMLElement).classList.contains("abbreviated")
+                ) {
+                    updateTooltipSide();
+                    setOpen(true);
+                }
+            }}
             onMouseLeave={() => (isDesktop() ? setOpen(false) : null)}
-            onFocus={(el) => (isDesktop() ? setOpen(el.target.classList.contains("abbreviated")) : null)}
+            onFocus={(el) => {
+                if (!isDesktop()) return;
+                if (
+                    (el.target as HTMLElement).classList.contains("abbreviated")
+                ) {
+                    updateTooltipSide();
+                    setOpen(true);
+                }
+            }}
             onBlur={() => (isDesktop() ? setOpen(false) : null)}
             onTouchStart={(el) => {
-                setOpen(!open() && el.target.classList.contains("abbreviated"));
+                if (
+                    (el.target as HTMLElement).classList.contains("abbreviated")
+                ) {
+                    updateTooltipSide();
+                    setOpen(!open());
+                }
                 if (open()) {
                     timeout = setTimeout(() => setOpen(false), 3236);
                 } else {
@@ -428,12 +467,20 @@ function Location(props: {
             data-full={text}
             ref={(el) => (locationEl = el)}
         >
-            {props.timedOut() && !props.isPast() ? "⚠ " : " "}
+            {" "}
             {text}
-
             <Transition name="tooltips">
                 <Show when={open()}>
-                    <span class="tooltip">{text}</span>
+                    <span
+                        class={
+                            "tooltip " +
+                            tooltipSide() +
+                            (multiLine() ? " multi-line" : "")
+                        }
+                        ref={(el) => (tooltipEl = el)}
+                    >
+                        {text}
+                    </span>
                 </Show>
             </Transition>
         </span>
@@ -475,7 +522,8 @@ function fitToWidth(
     const config: FitToWidthConfig = {
         targetWidth: targetWidth ?? 0,
     };
-    const abbrClasses = ".event-title, .pickup, .location, .order, .speakerTitle > span"
+    const abbrClasses =
+        ".event-title, .pickup, .location, .order, .speakerTitle > span";
 
     for (const el of elms) {
         if (el.parentElement) {
@@ -524,31 +572,22 @@ function fitToWidth(
                     const abbrEls = el.querySelectorAll(abbrClasses)!;
                     abbrEls.forEach((abbrEl) => {
                         if (!abbrEl.classList.contains("no-abbr")) {
-                            const abbr = abbreviateLocation(
-                                abbrEl.ariaLabel!,
-                            );
+                            const abbr = abbreviateLocation(abbrEl.ariaLabel!);
                             if (
-                                abbrEl.textContent !==
-                                abbr &&
+                                abbrEl.textContent !== abbr &&
                                 width < currentWidth
                             ) {
-                                abbrEl.textContent =
-                                    abbr;
-                                abbrEl.classList.add("abbreviated")
+                                abbrEl.textContent = abbr;
+                                abbrEl.classList.add("abbreviated");
                                 currentWidth = el.clientWidth;
                             }
-                            if (
-                                abbrEl.textContent ===
-                                abbr
-                            ) {
-                                abbrEl.textContent =
-                                    abbrEl.ariaLabel;
-                                abbrEl.classList.remove("abbreviated")
+                            if (abbrEl.textContent === abbr) {
+                                abbrEl.textContent = abbrEl.ariaLabel;
+                                abbrEl.classList.remove("abbreviated");
                                 currentWidth = el.clientWidth;
                                 if (width < currentWidth) {
-                                    abbrEl.textContent =
-                                        abbr;
-                                    abbrEl.classList.add("abbreviated")
+                                    abbrEl.textContent = abbr;
+                                    abbrEl.classList.add("abbreviated");
                                     currentWidth = el.clientWidth;
                                 }
                             }
@@ -628,7 +667,7 @@ function processEvents(raw: RawEvent[]): Event[] {
 }
 
 function getKey(e: Event) {
-    return `${e.title}::${e.location || ""}`;
+    return `${e.title}::${e.location || ""}::${e.start.toISOString()}`;
 }
 
 function hashSchedule(data: any) {
@@ -641,26 +680,28 @@ function hashSchedule(data: any) {
 
 const SHEET_BASE =
     "https://opensheet.elk.sh/1Sbs6P_5nYPKJPacHhh5f12cRY8nByyOFLfkbhN6FPyw";
-const SHEET_URL = `${SHEET_BASE}/schedule`;
 const dir =
     new Intl.Locale(navigator.language).getTextInfo()?.direction || "ltr";
 
 function Home(props: { setView: (arg0: string) => void }) {
     return (
         <div class="home">
-            <Tile
-                label="Shuttle Schedule"
-                onClick={() => props.setView("shuttles")}
-            />
             <Tile label="Gala Seating" onClick={() => props.setView("gala")} />
-            <Tile label="Schedule" onClick={() => props.setView("schedule")} />
             <Tile
-                label="Emergency Contacts"
-                onClick={() => props.setView("contact")}
+                label="Bus Schedule"
+                onClick={() => props.setView("shuttles")}
             />
             <Tile
                 label="Guest Speakers"
                 onClick={() => props.setView("speakers")}
+            />
+            <Tile
+                label="Event Schedule"
+                onClick={() => props.setView("schedule")}
+            />
+            <Tile
+                label="Emergency Contacts"
+                onClick={() => props.setView("contact")}
             />
             <Tile label="Sponsors" onClick={() => props.setView("sponsors")} />
         </div>
@@ -672,174 +713,6 @@ function Tile(props: { label: string; onClick?: () => void }) {
         <button class="tile" onClick={props.onClick}>
             <span class="tile-text">{props.label}</span>
         </button>
-    );
-}
-
-// Inline a simple Sheet component and keep a lazy wrapper for Suspense testing.
-function InlineSheet(props: { view: string; columns: string[] }) {
-    const [rows, setRows] = createSignal<Record<string, any>[]>([]);
-    const [loading, setLoading] = createSignal(true);
-
-    const storageKey = `sheet:${props.view}`;
-
-    function getInline(view: string) {
-        const el = document.getElementById(`__${view.toUpperCase()}__`);
-        if (!el) return null;
-        try {
-            return JSON.parse(el.textContent || "");
-        } catch {
-            return null;
-        }
-    }
-
-    function getStored(key: string) {
-        try {
-            return JSON.parse(localStorage.getItem(key) || "");
-        } catch {
-            return null;
-        }
-    }
-
-    function setStored(key: string, data: any) {
-        try {
-            localStorage.setItem(key, JSON.stringify(data));
-        } catch { }
-    }
-
-    function normalizeRows(data: any[]): Record<string, any>[] {
-        return data.map((r) => {
-            const out: Record<string, any> = {};
-            for (const k of props.columns) {
-                const raw = r[k] ?? r[k.toLowerCase()] ?? r[k.toUpperCase()];
-                out[k] = raw ?? "";
-            }
-            if (out.start) out.__startDate = parseADT(out.start) || null;
-            if (out.end) out.__endDate = parseADT(out.end) || null;
-            return out;
-        });
-    }
-
-    async function load() {
-        try {
-            const res = await fetch(`${SHEET_BASE}/${props.view}`, {
-                cache: "no-store",
-            });
-            const data = await res.json();
-            if (Array.isArray(data)) {
-                setRows(normalizeRows(data));
-                setStored(storageKey, data);
-            }
-        } catch (err) {
-            // keep existing rows
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    onMount(() => {
-        const inline = getInline(props.view);
-        const stored = getStored(storageKey);
-
-        if (stored && Array.isArray(stored)) {
-            setRows(normalizeRows(stored));
-            setLoading(false);
-        } else if (inline && Array.isArray(inline)) {
-            setRows(normalizeRows(inline));
-            setLoading(false);
-        }
-
-        const start = () => load();
-        if ("requestIdleCallback" in window) {
-            // // @ts-ignore
-            requestIdleCallback(start);
-        } else {
-            setTimeout(start, 0);
-        }
-    });
-
-    const titleMap: Record<string, string> = {
-        shuttles: "Shuttle Schedule",
-        gala: "Gala Seating",
-        contact: "Emergency Contacts",
-        speakers: "Guest Speakers",
-        sponsors: "Sponsors",
-    };
-
-    return (
-        <div>
-            <div class="sheet-header">
-                <h1>{titleMap[props.view] ?? props.view}</h1>
-            </div>
-
-            <Show
-                when={!loading() && rows().length > 0}
-                fallback={
-                    <div class="sheet-loading">
-                        {loading() ? "Loading…" : "No items"}
-                    </div>
-                }
-            >
-                <div>
-                    <table role="table" class="sheet-table">
-                        <thead>
-                            <tr>
-                                <For each={props.columns}>
-                                    {(c) => <th>{c}</th>}
-                                </For>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <For each={rows()}>
-                                {(r) => (
-                                    <tr>
-                                        <For each={props.columns}>
-                                            {(c) => (
-                                                <td>
-                                                    <Show
-                                                        when={
-                                                            c === "start" &&
-                                                            r.__startDate
-                                                        }
-                                                        fallback={r[c]}
-                                                    >
-                                                        <span>
-                                                            {(USER_TZ ===
-                                                                TIMEZONE
-                                                                ? timeFormatter
-                                                                : timeFormatterWithTZ
-                                                            ).format(
-                                                                r.__startDate,
-                                                            )}
-                                                        </span>
-                                                    </Show>
-                                                    <Show
-                                                        when={
-                                                            c === "end" &&
-                                                            r.__endDate
-                                                        }
-                                                    >
-                                                        <span>
-                                                            {"\u00A0—\u00A0"}
-                                                            {(USER_TZ ===
-                                                                TIMEZONE
-                                                                ? timeFormatter
-                                                                : timeFormatterWithTZ
-                                                            ).format(
-                                                                r.__endDate,
-                                                            )}
-                                                        </span>
-                                                    </Show>
-                                                </td>
-                                            )}
-                                        </For>
-                                    </tr>
-                                )}
-                            </For>
-                        </tbody>
-                    </table>
-                </div>
-            </Show>
-        </div>
     );
 }
 
@@ -857,51 +730,35 @@ export default function App() {
     const titles: Record<string, string> = {
         home: "",
         schedule: "Event Schedule",
-        shuttles: "Shuttle Schedule",
+        shuttles: "Bus Schedule",
         gala: "Gala Seating",
         contact: "Emergency Contacts",
         speakers: "Guest Speakers",
         sponsors: "Sponsors",
     };
-    const inline = getInlineData();
-    const stored = getStored();
-
-    const initialRaw: RawEvent[] =
-        stored ?? inline ?? (fallbackData as RawEvent[]) ?? [];
-
-    const [events, setEvents] = createSignal<Event[]>([]);
-    onMount(() => {
-        setEvents(processEvents(initialRaw));
-    });
-    let lastHash = hashSchedule(initialRaw);
-    const [isFresh, setIsFresh] = createSignal(false);
-    const [timedOut, setTimedOut] = createSignal(false);
-    const [changedKeys, setChangedKeys] = createSignal<Set<string>>(new Set());
     const [showJump, setShowJump] = createSignal(false);
     const [isAbove, setIsAbove] = createSignal(false);
     const [now, setNow] = createSignal(new Date());
     const nowTime = () => now().getTime();
+    const [prefetched, setPrefetched] = createSignal(false);
     let didScroll = false;
+    let isPopping = false;
+    let historyReady = false;
+
+    const isFrench = navigator.language.startsWith("fr");
+    const localeText = {
+        readBiography: isFrench ? "🔗 Lire la biographie" : "🔗 Read Biography",
+        searchPlaceholder: isFrench ? "Entrez votre nom" : "Enter your name",
+        to: isFrench ? "Vers" : "To",
+        from: isFrench ? "Depuis" : "From",
+    };
 
     const viewSignature = createMemo(() => view());
 
-    const locationSignature = createMemo(() =>
-        events()
-            .map((e) => e.location)
-            .join("\n"),
-    );
-
-    const titleSignature = createMemo(() =>
-        events()
-            .map((e) => e.title)
-            .join("\n"),
-    );
-
-    const liveSignature = createMemo(() =>
-        events()
-            .map((e) => now() >= e.start && now() < e.end)
-            .join("\n"),
-    );
+    const pageTitle = createMemo(() => {
+        const title = titles[view()];
+        return title ? `${title} | MYC Halifax 2026` : "MYC Halifax 2026";
+    });
 
     function runFit(classes?: string, willAnimate = true) {
         const scrollX = window.scrollX;
@@ -909,7 +766,8 @@ export default function App() {
 
         requestAnimationFrame(() => {
             fitToWidth(
-                classes ?? ".tile-text, .center h1, .day h2, .title:not(:has(> div)), .honorific, .name-line, .speakerTitle, .details",
+                classes ??
+                ".tile-text, .center h1, .day h2, .title:not(:has(> div)), .honorific, .name-line, .speakerTitle, .details",
                 willAnimate,
             );
             window.scrollTo(scrollX, scrollY);
@@ -953,54 +811,116 @@ export default function App() {
         }
     }
 
-    // Generic sheet provider factory for non-schedule views
+    const sponsorImagePreloads = new Set<string>();
+
+    async function prefetchSheetData(sheetView: string): Promise<any[] | null> {
+        const storageKey = `sheet:${sheetView}`;
+        const cached = localStorage.getItem(storageKey);
+        if (cached) {
+            try {
+                const data = JSON.parse(cached);
+                if (Array.isArray(data)) return data;
+            } catch {
+                localStorage.removeItem(storageKey);
+            }
+        }
+
+        try {
+            const res = await fetch(`${SHEET_BASE}/${sheetView}`, {
+                cache: "no-store",
+            });
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                localStorage.setItem(storageKey, JSON.stringify(data));
+                return data;
+            }
+        } catch {
+            // ignore prefetch failures
+        }
+
+        return null;
+    }
+
+    function prefetchSponsorImages(sheetData: any[]) {
+        for (const row of sheetData) {
+            const fileName = String(row.file ?? "").trim();
+            if (!fileName || sponsorImagePreloads.has(fileName)) continue;
+
+            const src = getImageSrc(fileName);
+            if (!src) continue;
+
+            sponsorImagePreloads.add(fileName);
+
+            const link = document.createElement("link");
+            link.rel = "preload";
+            link.as = "image";
+            link.href = src;
+            document.head.appendChild(link);
+
+            const img = new Image();
+            img.src = src;
+        }
+    }
+
+    async function prefetchAllSheets() {
+        if (prefetched()) return;
+        const sheetViews = [
+            "schedule",
+            "shuttles",
+            "gala",
+            "contact",
+            "speakers",
+            "sponsors",
+        ];
+
+        for (const viewName of sheetViews) {
+            const data = await prefetchSheetData(viewName);
+            if (viewName === "sponsors" && Array.isArray(data)) {
+                prefetchSponsorImages(data);
+            }
+        }
+
+        setPrefetched(true);
+    }
+
+    function handleNavigation(event: Event) {
+        const hash = location.hash.replace("#", "");
+        const nextView =
+            hash === "schedule" ||
+                hash === "shuttles" ||
+                hash === "gala" ||
+                hash === "contact" ||
+                hash === "speakers" ||
+                hash === "sponsors"
+                ? (hash as any)
+                : "home";
+
+        if (nextView !== view()) {
+            isPopping = true;
+            setView(nextView);
+            isPopping = false;
+        }
+    }
+
+    // Generic sheet provider factory
     function createSheetProvider(opts: {
-        view: string;
+        view: SheetView;
         columns: string[];
         remap?: Record<string, string>;
         remapToEvent?: boolean;
     }) {
         const { view: sheetView, columns, remap, remapToEvent } = opts;
-        const storageKey = `sheet:${sheetView}`;
 
         const [rows, setRows] = createSignal<Record<string, any>[]>([]);
         const [eventsLocal, setEventsLocal] = createSignal<Event[]>([]);
         const [loadingLocal, setLoadingLocal] = createSignal(true);
         const [isFreshLocal, setIsFreshLocal] = createSignal(false);
-        const [timedOutLocal, setTimedOutLocal] = createSignal(false);
         const [changedKeysLocal, setChangedKeysLocal] = createSignal<
             Set<string>
         >(new Set());
 
         let lastHashLocal = "";
         let pollTimer: number | undefined;
-        let timeoutTimer: number | undefined;
-
-        function getInlineLocal() {
-            const el = document.getElementById(
-                `__${sheetView.toUpperCase()}__`,
-            );
-            if (!el) return null;
-            try {
-                return JSON.parse(el.textContent || "");
-            } catch {
-                return null;
-            }
-        }
-
-        function getStoredLocal() {
-            try {
-                return JSON.parse(localStorage.getItem(storageKey) || "");
-            } catch {
-                return null;
-            }
-        }
-
-        function setStoredLocal(data: any) {
-            try {
-                localStorage.setItem(storageKey, JSON.stringify(data));
-            } catch { }
-        }
 
         function normalizeRows(data: any[]): Record<string, any>[] {
             return data.map((r) => {
@@ -1065,13 +985,25 @@ export default function App() {
                 const data = await res.json();
                 if (!Array.isArray(data)) return;
 
-                const incomingHash = JSON.stringify(data);
+                // Normalize data for stable hashing
+                const normalizedData = data
+                    .map((r) => {
+                        const sorted = {};
+                        for (const k of Object.keys(r).sort()) {
+                            sorted[k] = r[k];
+                        }
+                        return sorted;
+                    })
+                    .sort((a, b) =>
+                        JSON.stringify(a).localeCompare(JSON.stringify(b)),
+                    );
+
+                const incomingHash = JSON.stringify(normalizedData);
                 const hasRealChange = incomingHash !== lastHashLocal;
 
                 if (hasRealChange) {
                     const normalized = normalizeRows(data);
                     setIsFreshLocal(true);
-                    setTimedOutLocal(false);
 
                     if (remapToEvent) {
                         const next = processEvents(rowsToRawEvents(normalized));
@@ -1084,15 +1016,24 @@ export default function App() {
                             const merged = next.map((e) => {
                                 const key = getKey(e);
                                 const existing = prevMap.get(key);
-                                if (
-                                    existing &&
-                                    existing.start.getTime() ===
-                                    e.start.getTime() &&
-                                    existing.end.getTime() === e.end.getTime()
-                                ) {
-                                    return existing;
+                                const hasChanged =
+                                    !existing ||
+                                    existing.start.getTime() !==
+                                    e.start.getTime() ||
+                                    existing.end.getTime() !==
+                                    e.end.getTime() ||
+                                    existing.location !== e.location ||
+                                    existing.title !== e.title ||
+                                    existing.honorific !== e.honorific ||
+                                    existing.order !== e.order ||
+                                    existing.speakerTitle !== e.speakerTitle ||
+                                    existing.file !== e.file ||
+                                    existing.url !== e.url;
+
+                                if (hasChanged) {
+                                    changed.add(key);
                                 }
-                                changed.add(key);
+
                                 return e;
                             });
 
@@ -1111,7 +1052,7 @@ export default function App() {
                         setRows(normalized);
                     }
 
-                    setStoredLocal(data);
+                    setStoredSheetData(sheetView, data);
                     lastHashLocal = incomingHash;
                 }
             } catch (err) {
@@ -1122,8 +1063,8 @@ export default function App() {
         }
 
         function init() {
-            const inline = getInlineLocal();
-            const stored = getStoredLocal();
+            const inline = getInlineSheetData(sheetView);
+            const stored = getStoredSheetData(sheetView);
 
             if (stored && Array.isArray(stored)) {
                 const normalized = normalizeRows(stored);
@@ -1148,15 +1089,10 @@ export default function App() {
             }
 
             pollTimer = window.setInterval(loadLocal, 30000);
-
-            timeoutTimer = window.setTimeout(() => {
-                if (!isFreshLocal()) setTimedOutLocal(true);
-            }, 6180);
         }
 
         function cleanup() {
             if (pollTimer) clearInterval(pollTimer);
-            if (timeoutTimer) clearTimeout(timeoutTimer);
         }
 
         return {
@@ -1164,7 +1100,6 @@ export default function App() {
             events: eventsLocal,
             loading: loadingLocal,
             isFresh: isFreshLocal,
-            timedOut: timedOutLocal,
             changedKeys: changedKeysLocal,
             init,
             cleanup,
@@ -1176,7 +1111,6 @@ export default function App() {
     function ScheduleRenderer(props: {
         title: string;
         events: () => Event[];
-        timedOut: () => boolean;
         isFresh: () => boolean;
         changedKeys: () => Set<string>;
     }) {
@@ -1188,7 +1122,9 @@ export default function App() {
             const map = new Map<string, Event[]>();
             for (const e of props.events()) {
                 let key = keyFormatter.format(e.start);
-                if (key === "2026-05-18") { key = "2026-05-17"; }
+                if (key === "2026-05-18") {
+                    key = "2026-05-17";
+                }
                 if (!map.has(key)) map.set(key, []);
                 map.get(key)!.push(e);
             }
@@ -1197,9 +1133,14 @@ export default function App() {
 
         createRenderEffect(() => {
             if (props.events().length === 0) return;
-            runFit(".title:not(:has(> div)), .honorific, .name-line, .speakerTitle, .details", false);
+            runFit(
+                ".title:not(:has(> div)), .honorific, .name-line, .speakerTitle, .details",
+                false,
+            );
             window.setTimeout(() => {
-                runFit(".title:not(:has(> div)), .honorific, .name-line, .speakerTitle, .details");
+                runFit(
+                    ".title:not(:has(> div)), .honorific, .name-line, .speakerTitle, .details",
+                );
             }, 382);
         });
 
@@ -1269,26 +1210,51 @@ export default function App() {
                                                 {props.title === "Speakers" ? (
                                                     <>
                                                         {e.honorific && (
-                                                            <div class="honorific">
+                                                            <div
+                                                                classList={{
+                                                                    honorific: true,
+                                                                    updated:
+                                                                        props.isFresh() &&
+                                                                        props
+                                                                            .changedKeys()
+                                                                            .has(
+                                                                                getKey(
+                                                                                    e,
+                                                                                ),
+                                                                            ),
+                                                                }}
+                                                            >
                                                                 {e.honorific}
                                                             </div>
                                                         )}
                                                         <div class="name-line">
-                                                            <strong class="speaker-name">
+                                                            <strong
+                                                                classList={{
+                                                                    "speaker-name": true,
+                                                                    updated:
+                                                                        props.isFresh() &&
+                                                                        props
+                                                                            .changedKeys()
+                                                                            .has(
+                                                                                getKey(
+                                                                                    e,
+                                                                                ),
+                                                                            ),
+                                                                }}
+                                                            >
                                                                 {e.title}
                                                             </strong>
                                                             {e.order && ", "}
                                                             <Location
                                                                 e={e}
                                                                 property="order"
-                                                                timedOut={() =>
-                                                                    props.timedOut()
-                                                                }
+                                                                localeText={localeText}
                                                                 isFresh={() =>
                                                                     props.isFresh()
                                                                 }
                                                                 isPast={() =>
-                                                                    now() > e.end
+                                                                    now() >
+                                                                    e.end
                                                                 }
                                                                 changedKeys={() =>
                                                                     props.changedKeys()
@@ -1299,10 +1265,6 @@ export default function App() {
                                                                     <span
                                                                         classList={{
                                                                             countdown: true,
-                                                                            timeout:
-                                                                                props.timedOut() &&
-                                                                                !props.isFresh() &&
-                                                                                !isPast(),
                                                                             updated:
                                                                                 props.isFresh() &&
                                                                                 props
@@ -1314,10 +1276,7 @@ export default function App() {
                                                                                     ),
                                                                         }}
                                                                     >
-                                                                        {props.timedOut() &&
-                                                                            !isPast()
-                                                                            ? "⚠ "
-                                                                            : " "}
+                                                                        {" "}
                                                                         {formatRelative(
                                                                             e.start.getTime() -
                                                                             now().getTime(),
@@ -1329,14 +1288,12 @@ export default function App() {
                                                             <RenderWithBreaks
                                                                 e={e}
                                                                 property="speakerTitle"
-                                                                timedOut={() =>
-                                                                    props.timedOut()
-                                                                }
                                                                 isFresh={() =>
                                                                     props.isFresh()
                                                                 }
                                                                 isPast={() =>
-                                                                    now() > e.end
+                                                                    now() >
+                                                                    e.end
                                                                 }
                                                                 changedKeys={() =>
                                                                     props.changedKeys()
@@ -1349,14 +1306,19 @@ export default function App() {
                                                         <Location
                                                             e={e}
                                                             property="title"
-                                                            part={props.title === "Shuttles Schedule" ? 3 : 4}
-                                                            timedOut={() =>
-                                                                props.timedOut()
+                                                            part={
+                                                                props.title ===
+                                                                    "Shuttles Schedule"
+                                                                    ? 3
+                                                                    : 4
                                                             }
+                                                            localeText={localeText}
                                                             isFresh={() =>
                                                                 props.isFresh()
                                                             }
-                                                            isPast={() => now() > e.end}
+                                                            isPast={() =>
+                                                                now() > e.end
+                                                            }
                                                             changedKeys={() =>
                                                                 props.changedKeys()
                                                             }
@@ -1367,10 +1329,6 @@ export default function App() {
                                                                 <span
                                                                     classList={{
                                                                         countdown: true,
-                                                                        timeout:
-                                                                            props.timedOut() &&
-                                                                            !props.isFresh() &&
-                                                                            !isPast(),
                                                                         updated:
                                                                             props.isFresh() &&
                                                                             props
@@ -1382,10 +1340,7 @@ export default function App() {
                                                                                 ),
                                                                     }}
                                                                 >
-                                                                    {props.timedOut() &&
-                                                                        !isPast()
-                                                                        ? "⚠ "
-                                                                        : " "}
+                                                                    {" "}
                                                                     {formatRelative(
                                                                         e.start.getTime() -
                                                                         now().getTime(),
@@ -1400,10 +1355,6 @@ export default function App() {
                                                 <span
                                                     classList={{
                                                         time: true,
-                                                        timeout:
-                                                            props.timedOut() &&
-                                                            !props.isFresh() &&
-                                                            !isPast(),
                                                         updated:
                                                             props.isFresh() &&
                                                             props
@@ -1411,24 +1362,43 @@ export default function App() {
                                                                 .has(getKey(e)),
                                                     }}
                                                 >
-                                                    {props.timedOut() &&
-                                                        !isPast()
-                                                        ? "⚠ "
-                                                        : " "}
+                                                    {" "}
                                                     {e.isExplicitEnd
                                                         ? (USER_TZ === TIMEZONE
                                                             ? timeFormatter
                                                             : timeFormatterWithTZ
-                                                        ).formatRangeToParts(
-                                                            e.start,
-                                                            e.end,
-                                                        ).filter(part =>
-                                                            ['hour', 'minute', 'dayPeriod', 'second', 'fractionalSecondDigits', 'timeZoneName'].includes(part.type) ||
-                                                            (part.type === 'literal' && part.source === 'shared') ||
-                                                            (part.type === 'literal' && !/[,-/]/.test(part.value))
                                                         )
-                                                            .map(part => part.value)
-                                                            .join('')
+                                                            .formatRangeToParts(
+                                                                e.start,
+                                                                e.end,
+                                                            )
+                                                            .filter(
+                                                                (part) =>
+                                                                    [
+                                                                        "hour",
+                                                                        "minute",
+                                                                        "dayPeriod",
+                                                                        "second",
+                                                                        "fractionalSecondDigits",
+                                                                        "timeZoneName",
+                                                                    ].includes(
+                                                                        part.type,
+                                                                    ) ||
+                                                                    (part.type ===
+                                                                        "literal" &&
+                                                                        part.source ===
+                                                                        "shared") ||
+                                                                    (part.type ===
+                                                                        "literal" &&
+                                                                        !/[,-/]/.test(
+                                                                            part.value,
+                                                                        )),
+                                                            )
+                                                            .map(
+                                                                (part) =>
+                                                                    part.value,
+                                                            )
+                                                            .join("")
                                                             .trim()
                                                         : (USER_TZ === TIMEZONE
                                                             ? timeFormatter
@@ -1447,30 +1417,45 @@ export default function App() {
                                                         </span>
                                                     )}
                                                 </span>
-                                                {props.title !== "Speakers" ?
+                                                {props.title !== "Speakers" ? (
                                                     <Location
                                                         e={e}
                                                         property="location"
-                                                        part={props.title === "Shuttles Schedule" ? 3 : 4}
-                                                        timedOut={() =>
-                                                            props.timedOut()
+                                                        localeText={localeText}
+                                                        part={
+                                                            props.title ===
+                                                                "Shuttles Schedule"
+                                                                ? 3
+                                                                : 4
                                                         }
                                                         isFresh={() =>
                                                             props.isFresh()
                                                         }
-                                                        isPast={() => now() > e.end}
+                                                        isPast={() =>
+                                                            now() > e.end
+                                                        }
                                                         changedKeys={() =>
                                                             props.changedKeys()
                                                         }
-                                                    /> : <a
-                                                        href={getPdfSrc(e.file) || "#"}
+                                                    />
+                                                ) : (
+                                                    <a
+                                                        href={
+                                                            getPdfSrc(e.file) ||
+                                                            "#"
+                                                        }
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                     >
                                                         <button class="biography">
-                                                            <span class="biography-text">🔗 Read Biography</span>
+                                                            <span class="biography-text">
+                                                                {
+                                                                    localeText.readBiography
+                                                                }
+                                                            </span>
                                                         </button>
-                                                    </a>}
+                                                    </a>
+                                                )}
                                             </div>
                                         </div>
                                     );
@@ -1537,7 +1522,6 @@ export default function App() {
                 <ScheduleRenderer
                     title="Shuttles Schedule"
                     events={() => provider.events()}
-                    timedOut={() => provider.timedOut()}
                     isFresh={() => provider.isFresh()}
                     changedKeys={() => provider.changedKeys()}
                 />
@@ -1548,7 +1532,15 @@ export default function App() {
     function SpeakersView() {
         const provider = createSheetProvider({
             view: "speakers",
-            columns: ["honorific", "name", "order", "title", "start", "end", "file"],
+            columns: [
+                "honorific",
+                "name",
+                "order",
+                "title",
+                "start",
+                "end",
+                "file",
+            ],
             remap: { title: "name" },
             remapToEvent: true,
         });
@@ -1561,7 +1553,6 @@ export default function App() {
                 <ScheduleRenderer
                     title="Speakers"
                     events={() => provider.events()}
-                    timedOut={() => provider.timedOut()}
                     isFresh={() => provider.isFresh()}
                     changedKeys={() => provider.changedKeys()}
                 />
@@ -1580,13 +1571,14 @@ export default function App() {
 
         const results = createMemo(() => {
             const normalized = normalizedQuery();
-            if (!normalized) return [] as {
-                row: Record<string, any>;
-                score: number;
-                exactFirst: boolean;
-                exactLast: boolean;
-                exactFull: boolean;
-            }[];
+            if (!normalized)
+                return [] as {
+                    row: Record<string, any>;
+                    score: number;
+                    exactFirst: boolean;
+                    exactLast: boolean;
+                    exactFull: boolean;
+                }[];
 
             const compactQuery = compactForSearch(normalized);
             const queryWords = splitSearchWords(normalized);
@@ -1613,7 +1605,8 @@ export default function App() {
                             compactQuery.endsWith(lastName)),
                     );
                     const exactFull =
-                        normalizedName === normalized || compactName === compactQuery;
+                        normalizedName === normalized ||
+                        compactName === compactQuery;
 
                     const wordScores = queryWords.flatMap((queryWord) =>
                         nameWords.map((nameWord) =>
@@ -1650,7 +1643,8 @@ export default function App() {
                     return item.score > 0;
                 })
                 .sort((a, b) => {
-                    if (a.priority !== b.priority) return b.priority - a.priority;
+                    if (a.priority !== b.priority)
+                        return b.priority - a.priority;
                     if (a.score !== b.score) return b.score - a.score;
                     return String(a.row.name).localeCompare(String(b.row.name));
                 })
@@ -1664,7 +1658,14 @@ export default function App() {
             <>
                 <form
                     class="gala-search"
-                    onSubmit={(event) => event.preventDefault()}
+                    onSubmit={(event) => {
+                        event.preventDefault();
+                        const input = document.getElementById(
+                            "gala-search-input",
+                        ) as HTMLInputElement | null;
+
+                        input?.blur();
+                    }}
                 >
                     <input
                         id="gala-search-input"
@@ -1673,7 +1674,7 @@ export default function App() {
                         autocomplete="off"
                         autocapitalize="words"
                         spellcheck="false"
-                        placeholder="Enter your name"
+                        placeholder={localeText.searchPlaceholder}
                         value={query()}
                         onInput={(event) =>
                             setQuery(
@@ -1684,20 +1685,26 @@ export default function App() {
                 </form>
 
                 <Show when={!provider.loading() && normalizedQuery()}>
-                    <Show
-                        when={results().length > 0}
-                    >
+                    <Show when={results().length > 0}>
                         <div class="gala-results">
                             <div class="gala-results-header">
                                 <span>Name</span>
                                 <span>Table</span>
-                            </div>                            <For
-                                each={results().find((i) => i.exactFull) ? [results().find((i) => i.exactFull)!] :
-                                    results()
+                            </div>{" "}
+                            <For
+                                each={
+                                    results().find((i) => i.exactFull)
+                                        ? [results().find((i) => i.exactFull)!]
+                                        : results()
                                 }
                             >
                                 {(item) => (
-                                    <div classList={{ "gala-results-item": true, "gala-exact-result": item.exactFull }}>
+                                    <div
+                                        classList={{
+                                            "gala-results-item": true,
+                                            "gala-exact-result": item.exactFull,
+                                        }}
+                                    >
                                         <span>{item.row.name}</span>
                                         <span>{item.row.table || "—"}</span>
                                     </div>
@@ -1706,11 +1713,13 @@ export default function App() {
                         </div>
                     </Show>
                     <Show
-                        when={results().length === 0 && normalizedQuery().length >= 3}
+                        when={
+                            results().length === 0 &&
+                            normalizedQuery().length >= 3
+                        }
                     >
                         <div class="gala-results-empty">No seat found.</div>
                     </Show>
-
                 </Show>
             </>
         );
@@ -1723,6 +1732,7 @@ export default function App() {
         });
 
         createRenderEffect(() => {
+            if (provider.rows().length === 0) return;
             runFit(".title:not(:has(> div)), .details", false);
             window.setTimeout(() => {
                 runFit(".title:not(:has(> div)), .details");
@@ -1738,23 +1748,26 @@ export default function App() {
                     <div class="event">
                         <span class="title">
                             <div class="name-line">
-                                <strong class="speaker-name">
-                                    {e.name}
-                                </strong>
+                                <strong class="speaker-name">{e.name}</strong>
                             </div>
                         </span>
                         <div class="details">
-                            <span
-                            >
-                                {e.title}
-                            </span>
+                            <span>{e.title}</span>
                             <a
-                                href={"tel:+" + (e.phone as string).replace(/\D/g, "") || "#"}
+                                href={
+                                    "tel:+" +
+                                    (e.phone as string).replace(
+                                        /\D/g,
+                                        "",
+                                    ) || "#"
+                                }
                                 target="_blank"
                                 rel="noopener noreferrer"
                             >
                                 <button class="biography">
-                                    <span class="biography-text">{"📞 " + e.phone}</span>
+                                    <span class="biography-text">
+                                        {"📞 " + e.phone}
+                                    </span>
                                 </button>
                             </a>
                         </div>
@@ -1769,27 +1782,46 @@ export default function App() {
             view: "sponsors",
             columns: ["name", "level", "logo", "file", "url"],
         });
+        const prefetchedImages = new Set<string>();
+
+        createEffect(() => {
+            for (const r of provider.rows()) {
+                const imageFile = r.file || r.logo;
+                const src = getImageSrc(imageFile);
+                if (!imageFile || !src || prefetchedImages.has(imageFile))
+                    continue;
+                prefetchedImages.add(imageFile);
+                const img = new Image();
+                img.src = src;
+            }
+        });
+
         onMount(() => provider.init());
         onCleanup(() => provider.cleanup());
+
         return (
             <For each={provider.rows()}>
-                {(r) => (
-                    <>
-                        <h2 class="level">{r.level}</h2>
-                        <div class={"sponsor " + r.level}>
-                            <a
-                                href={r.url || "#"}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                            >
-                                <img
-                                    src={getImageSrc(r.file) || ""}
-                                    alt={r.name || "sponsor"}
-                                />
-                            </a>
-                        </div>
-                    </>
-                )}
+                {(r) => {
+                    const imageFile = r.file || r.logo;
+                    return (
+                        <>
+                            <h2 class="level">{r.level}</h2>
+                            <div class={"sponsor " + r.level}>
+                                <a
+                                    href={r.url || "#"}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    <img
+                                        src={getImageSrc(imageFile)}
+                                        alt={r.name || "sponsor"}
+                                        loading="eager"
+                                    />
+                                </a>
+                            </div>
+                        </>
+                    );
+                }}
             </For>
         );
     }
@@ -1809,56 +1841,11 @@ export default function App() {
                 <ScheduleRenderer
                     title="Event Schedule"
                     events={() => provider.events()}
-                    timedOut={() => provider.timedOut()}
                     isFresh={() => provider.isFresh()}
                     changedKeys={() => provider.changedKeys()}
                 />
             </div>
         );
-    }
-
-    async function load() {
-        const res = await fetch(SHEET_URL, { cache: "no-store" });
-        const data: RawEvent[] = await res.json();
-
-        const incomingHash = data.length + ":" + data[0]?.start;
-        const hasRealChange = incomingHash !== lastHash;
-
-        if (hasRealChange) {
-            const next = processEvents(data);
-            setIsFresh(true);
-            setTimedOut(false);
-
-            setEvents((prev) => {
-                const prevMap = new Map(prev.map((e) => [getKey(e), e]));
-
-                const changed = new Set<string>();
-
-                const merged = next.map((e) => {
-                    const key = getKey(e);
-                    const existing = prevMap.get(key);
-                    if (
-                        existing &&
-                        existing.start.getTime() === e.start.getTime() &&
-                        existing.end.getTime() === e.end.getTime()
-                    ) {
-                        return existing;
-                    }
-                    changed.add(key);
-                    return e;
-                });
-
-                setChangedKeys(changed);
-
-                if (changed.size > 0) {
-                    setTimeout(() => setChangedKeys(new Set<string>()), 1618);
-                }
-
-                return merged;
-            });
-            setStored(data);
-            lastHash = incomingHash;
-        }
     }
 
     onMount(() => {
@@ -1870,18 +1857,23 @@ export default function App() {
             hash === "contact" ||
             hash === "speakers" ||
             hash === "sponsors"
-        )
+        ) {
             setView(hash as any);
+        }
 
-        const startFetch = () => load();
+        history.replaceState({ view: view() }, pageTitle(), `#${view()}`);
+        historyReady = true;
 
-        if ("requestIdleCallback" in window) {
-            requestIdleCallback(startFetch);
-        } else {
-            setTimeout(startFetch, 0);
+        // Preload sponsor images from cached data immediately
+        const cachedSponsors = getStoredSheetData("sponsors");
+        if (cachedSponsors) {
+            prefetchSponsorImages(cachedSponsors);
         }
 
         window.addEventListener("scroll", checkPosition);
+        const navigationListener = handleNavigation as unknown as EventListener;
+        window.addEventListener("popstate", navigationListener);
+        window.addEventListener("hashchange", navigationListener);
 
         const container = document.querySelector(".container");
         let lastContainerWidth = container?.clientWidth ?? 0;
@@ -1900,26 +1892,27 @@ export default function App() {
             resizeObserver.observe(container);
         }
 
-        const fetchTimer = setInterval(load, 30000);
         const clockTimer = setInterval(() => setNow(new Date()), 1000);
-        const timeout = setTimeout(() => {
-            if (!isFresh()) setTimedOut(true);
-        }, 6180);
+
+        if (!prefetched()) {
+            if ("requestIdleCallback" in window) {
+                requestIdleCallback(prefetchAllSheets);
+            } else {
+                setTimeout(prefetchAllSheets, 0);
+            }
+        }
 
         return () => {
-            clearInterval(fetchTimer);
             clearInterval(clockTimer);
-            clearTimeout(timeout);
             window.removeEventListener("scroll", checkPosition);
+            window.removeEventListener("popstate", navigationListener);
+            window.removeEventListener("hashchange", navigationListener);
             resizeObserver.disconnect();
         };
     });
 
     createRenderEffect(() => {
         viewSignature();
-        locationSignature();
-        titleSignature();
-        liveSignature();
         runFit(undefined, false);
         window.setTimeout(() => {
             runFit();
@@ -1927,37 +1920,19 @@ export default function App() {
     });
 
     createEffect(() => {
-        history.replaceState(null, "", `#${view()}`);
+        document.title = pageTitle();
+        if (!historyReady || isPopping) return;
+        history.pushState({ view: view() }, pageTitle(), `#${view()}`);
+    });
 
-        if (didScroll) return;
-
-        const now = nowTime();
-        const list = events();
-
-        const target =
-            list.find(
-                (e) => now >= e.start.getTime() && now < e.end.getTime(),
-            ) || list.find((e) => e.start.getTime() > now);
-
-        if (!target) return;
-
-        const key = getKey(target);
-
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                const el = document.querySelector(
-                    `[data-key="${CSS.escape(key)}"]`,
-                );
-
-                if (el) {
-                    el.scrollIntoView({
-                        behavior: "smooth",
-                        block: "center",
-                    });
-                    didScroll = true;
-                }
-            });
-        });
+    createEffect(() => {
+        if (view() === "home" && !prefetched()) {
+            if ("requestIdleCallback" in window) {
+                requestIdleCallback(prefetchAllSheets);
+            } else {
+                setTimeout(prefetchAllSheets, 0);
+            }
+        }
     });
 
     return (
