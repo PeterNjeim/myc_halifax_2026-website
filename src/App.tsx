@@ -283,46 +283,50 @@ function splitSearchWords(value?: string): string[] {
     return normalizeForSearch(value).split(" ").filter(Boolean);
 }
 
-function levenshteinDistance(a: string, b: string): number {
+function damerauLevenshteinDistance(a: string, b: string): number {
     const al = a.length;
     const bl = b.length;
     if (!al) return bl;
     if (!bl) return al;
 
-    const row = new Array<number>(bl + 1);
-    const prev = new Array<number>(bl + 1);
+    const INF = al + bl;
+    const score: number[][] = Array.from({ length: al + 2 }, () =>
+        new Array<number>(bl + 2).fill(0),
+    );
 
+    score[0][0] = INF;
+    for (let i = 0; i <= al; i++) {
+        score[i + 1][1] = i;
+        score[i + 1][0] = INF;
+    }
     for (let j = 0; j <= bl; j++) {
-        prev[j] = j;
+        score[1][j + 1] = j;
+        score[0][j + 1] = INF;
     }
 
+    const last: Map<string, number> = new Map();
     for (let i = 1; i <= al; i++) {
-        row[0] = i;
+        let lastMatch = 0;
         for (let j = 1; j <= bl; j++) {
-            const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-            row[j] = Math.min(prev[j] + 1, row[j - 1] + 1, prev[j - 1] + cost);
+            const i1 = last.get(b[j - 1]) ?? 0;
+            const j1 = lastMatch;
+            let cost = 1;
+            if (a[i - 1] === b[j - 1]) {
+                cost = 0;
+                lastMatch = j;
+            }
+
+            score[i + 1][j + 1] = Math.min(
+                score[i][j] + cost,
+                score[i + 1][j] + 1,
+                score[i][j + 1] + 1,
+                score[i1][j1] + (i - i1 - 1) + 1 + (j - j1 - 1),
+            );
         }
-        for (let j = 0; j <= bl; j++) {
-            prev[j] = row[j];
-        }
+        last.set(a[i - 1], i);
     }
 
-    return row[bl];
-}
-
-function searchScore(text: string, query: string): number {
-    if (!text || !query) return 0;
-
-    if (text === query) return 1000000;
-    const index = text.indexOf(query);
-    if (index >= 0) return 100000 - index;
-
-    if (query.length <= 1) return 0;
-    const distance = levenshteinDistance(text, query);
-    const maxDistance = Math.max(1, Math.floor(query.length * 0.25));
-    if (distance > maxDistance) return 0;
-
-    return Math.max(1, Math.floor((query.length - distance) * 1000));
+    return score[al + 1][bl + 1];
 }
 
 function Location(props: {
@@ -670,13 +674,6 @@ function getKey(e: Event) {
     return `${e.title}::${e.location || ""}::${e.start.toISOString()}`;
 }
 
-function hashSchedule(data: any) {
-    try {
-        return JSON.stringify(data);
-    } catch {
-        return String(data);
-    }
-}
 
 const SHEET_BASE =
     "https://opensheet.elk.sh/1Sbs6P_5nYPKJPacHhh5f12cRY8nByyOFLfkbhN6FPyw";
@@ -1288,6 +1285,7 @@ export default function App() {
                                                             <RenderWithBreaks
                                                                 e={e}
                                                                 property="speakerTitle"
+                                                                localeText={localeText}
                                                                 isFresh={() =>
                                                                     props.isFresh()
                                                                 }
@@ -1568,6 +1566,7 @@ export default function App() {
         });
         const [query, setQuery] = createSignal("");
         const normalizedQuery = createMemo(() => normalizeForSearch(query()));
+        const seatingDiagramSrc = getImageSrc("gala_seating.png");
 
         const results = createMemo(() => {
             const normalized = normalizedQuery();
@@ -1578,10 +1577,17 @@ export default function App() {
                     exactFirst: boolean;
                     exactLast: boolean;
                     exactFull: boolean;
+                    matchCount: number;
+                    exactMatchLength: number;
+                    prefixMatchLength: number;
+                    nearMatchCount: number;
+                    wholeDistance: number;
+                    priority: number;
                 }[];
 
             const compactQuery = compactForSearch(normalized);
             const queryWords = splitSearchWords(normalized);
+            const fullThreshold = Math.max(1, Math.floor(normalized.length * 0.25));
 
             return provider
                 .rows()
@@ -1589,41 +1595,75 @@ export default function App() {
                     const normalizedName = normalizeForSearch(row.name);
                     const compactName = compactForSearch(normalizedName);
                     const nameWords = splitSearchWords(normalizedName);
-                    const firstName = nameWords[0] || "";
-                    const lastName = nameWords[nameWords.length - 1] || "";
 
-                    const exactFirst = Boolean(
-                        firstName &&
-                        (queryWords.includes(firstName) ||
-                            compactQuery.startsWith(firstName) ||
-                            compactQuery.endsWith(firstName)),
-                    );
-                    const exactLast = Boolean(
-                        lastName &&
-                        (queryWords.includes(lastName) ||
-                            compactQuery.startsWith(lastName) ||
-                            compactQuery.endsWith(lastName)),
-                    );
                     const exactFull =
                         normalizedName === normalized ||
                         compactName === compactQuery;
 
-                    const wordScores = queryWords.flatMap((queryWord) =>
-                        nameWords.map((nameWord) =>
-                            searchScore(nameWord, queryWord),
-                        ),
-                    );
-                    const bestWordScore = wordScores.length
-                        ? Math.max(...wordScores)
-                        : 0;
+                    let exactMatchLength = 0;
+                    let prefixMatchLength = 0;
+                    let nearMatchCount = 0;
+                    let matchCount = 0;
+                    let wordScore = 0;
 
-                    const score = Math.max(
-                        searchScore(normalizedName, normalized),
-                        searchScore(compactName, compactQuery),
-                        bestWordScore,
-                    );
+                    for (const queryWord of queryWords) {
+                        let bestDistance = Infinity;
+                        let prefixMatch = false;
+                        for (const nameWord of nameWords) {
+                            bestDistance = Math.min(
+                                bestDistance,
+                                damerauLevenshteinDistance(nameWord, queryWord),
+                                damerauLevenshteinDistance(
+                                    compactForSearch(nameWord),
+                                    queryWord,
+                                ),
+                            );
+                            if (nameWord.startsWith(queryWord)) {
+                                prefixMatch = true;
+                            }
+                        }
 
-                    const priority = exactFirst ? 3 : exactLast ? 2 : 1;
+                        if (nameWords.includes(queryWord)) {
+                            exactMatchLength += queryWord.length;
+                            wordScore += 2200;
+                            matchCount += 1;
+                        } else if (prefixMatch) {
+                            prefixMatchLength += queryWord.length;
+                            wordScore += 1200;
+                            matchCount += 1;
+                        } else if (bestDistance === 1) {
+                            nearMatchCount += 1;
+                            wordScore += 900;
+                            matchCount += 1;
+                        } else if (bestDistance === 2 && queryWord.length >= 4) {
+                            nearMatchCount += 1;
+                            wordScore += 600;
+                            matchCount += 1;
+                        }
+                    }
+
+                    const wholeDistance = Math.min(
+                        damerauLevenshteinDistance(normalizedName, normalized),
+                        damerauLevenshteinDistance(compactName, compactQuery),
+                    );
+                    const fallbackScore = Math.max(0, 1000 - wholeDistance * 200);
+                    const score = wordScore + fallbackScore;
+
+                    const exactFirst = queryWords.includes(nameWords[0] || "");
+                    const exactLast = queryWords.includes(
+                        nameWords[nameWords.length - 1] || "",
+                    );
+                    const priority = exactFull
+                        ? 6
+                        : exactMatchLength > 0
+                            ? 5
+                            : prefixMatchLength > 0
+                                ? 4
+                                : nearMatchCount > 0
+                                    ? 3
+                                    : exactFirst || exactLast
+                                        ? 2
+                                        : 0;
 
                     return {
                         row,
@@ -1631,24 +1671,45 @@ export default function App() {
                         exactFirst,
                         exactLast,
                         exactFull,
+                        matchCount,
+                        exactMatchLength,
+                        prefixMatchLength,
+                        nearMatchCount,
+                        wholeDistance,
                         priority,
                     };
                 })
                 .filter((item) => {
-                    if (item.exactFull || item.exactFirst || item.exactLast) {
-                        return true;
-                    }
-
-                    if (normalized.length < 3) return false;
-                    return item.score > 0;
+                    if (item.exactFull) return true;
+                    if (normalized.length < 2) return false;
+                    return (
+                        item.exactMatchLength > 0 ||
+                        item.prefixMatchLength > 0 ||
+                        item.nearMatchCount > 0 ||
+                        item.wholeDistance <= fullThreshold
+                    );
                 })
                 .sort((a, b) => {
-                    if (a.priority !== b.priority)
-                        return b.priority - a.priority;
+                    if (a.priority !== b.priority) return b.priority - a.priority;
+                    if (a.exactMatchLength !== b.exactMatchLength)
+                        return b.exactMatchLength - a.exactMatchLength;
+                    if (a.prefixMatchLength !== b.prefixMatchLength)
+                        return b.prefixMatchLength - a.prefixMatchLength;
+                    if (a.nearMatchCount !== b.nearMatchCount)
+                        return b.nearMatchCount - a.nearMatchCount;
+                    if (a.matchCount !== b.matchCount)
+                        return b.matchCount - a.matchCount;
+                    if (a.wholeDistance !== b.wholeDistance)
+                        return a.wholeDistance - b.wholeDistance;
                     if (a.score !== b.score) return b.score - a.score;
                     return String(a.row.name).localeCompare(String(b.row.name));
                 })
                 .slice(0, 6);
+        });
+
+        const displayResults = createMemo(() => {
+            const exactMatches = results().filter((item) => item.exactFull);
+            return exactMatches.length ? exactMatches : results();
         });
 
         onMount(() => provider.init());
@@ -1684,42 +1745,48 @@ export default function App() {
                     />
                 </form>
 
-                <Show when={!provider.loading() && normalizedQuery()}>
-                    <Show when={results().length > 0}>
-                        <div class="gala-results">
-                            <div class="gala-results-header">
-                                <span>Name</span>
-                                <span>Table</span>
-                            </div>{" "}
-                            <For
-                                each={
-                                    results().find((i) => i.exactFull)
-                                        ? [results().find((i) => i.exactFull)!]
-                                        : results()
-                                }
-                            >
-                                {(item) => (
-                                    <div
-                                        classList={{
-                                            "gala-results-item": true,
-                                            "gala-exact-result": item.exactFull,
-                                        }}
-                                    >
-                                        <span>{item.row.name}</span>
-                                        <span>{item.row.table || "—"}</span>
-                                    </div>
-                                )}
-                            </For>
-                        </div>
+                <div class="gala-results-wrapper">
+                    <Show when={!provider.loading() && normalizedQuery()}>
+                        <Show when={results().length > 0}>
+                            <div class="gala-results">
+                                <div class="gala-results-header">
+                                    <span>Name</span>
+                                    <span>Table</span>
+                                </div>
+                                <For each={displayResults()}>
+                                    {(item) => (
+                                        <div
+                                            classList={{
+                                                "gala-results-item": true,
+                                                "gala-exact-result": item.exactFull,
+                                            }}
+                                        >
+                                            <span>{item.row.name}</span>
+                                            <span>{item.row.table || "—"}</span>
+                                        </div>
+                                    )}
+                                </For>
+                            </div>
+                        </Show>
+                        <Show
+                            when={
+                                results().length === 0 &&
+                                normalizedQuery().length >= 3
+                            }
+                        >
+                            <div class="gala-results-empty">No seat found.</div>
+                        </Show>
                     </Show>
-                    <Show
-                        when={
-                            results().length === 0 &&
-                            normalizedQuery().length >= 3
-                        }
-                    >
-                        <div class="gala-results-empty">No seat found.</div>
-                    </Show>
+                </div>
+
+                <Show when={seatingDiagramSrc}>
+                    <div class="gala-diagram">
+                        <img
+                            src={seatingDiagramSrc}
+                            alt="Gala seating chart"
+                            loading="lazy"
+                        />
+                    </div>
                 </Show>
             </>
         );
