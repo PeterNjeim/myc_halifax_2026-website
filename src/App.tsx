@@ -1743,37 +1743,39 @@ export default function App() {
         onCleanup(() => provider.cleanup());
 
         return (
-            <For each={provider.rows()}>
-                {(e) => (
-                    <div class="event">
-                        <span class="title">
-                            <div class="name-line">
-                                <strong class="speaker-name">{e.name}</strong>
+            <div class="contacts">
+                <For each={provider.rows()}>
+                    {(e) => (
+                        <div class="event">
+                            <span class="title">
+                                <div class="name-line">
+                                    <strong class="speaker-name">{e.name}</strong>
+                                </div>
+                            </span>
+                            <div class="details">
+                                <span>{e.title}</span>
+                                <a
+                                    href={
+                                        "tel:+" +
+                                        (e.phone as string).replace(
+                                            /\D/g,
+                                            "",
+                                        ) || "#"
+                                    }
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    <button class="biography">
+                                        <span class="biography-text">
+                                            {"📞 " + e.phone}
+                                        </span>
+                                    </button>
+                                </a>
                             </div>
-                        </span>
-                        <div class="details">
-                            <span>{e.title}</span>
-                            <a
-                                href={
-                                    "tel:+" +
-                                    (e.phone as string).replace(
-                                        /\D/g,
-                                        "",
-                                    ) || "#"
-                                }
-                                target="_blank"
-                                rel="noopener noreferrer"
-                            >
-                                <button class="biography">
-                                    <span class="biography-text">
-                                        {"📞 " + e.phone}
-                                    </span>
-                                </button>
-                            </a>
                         </div>
-                    </div>
-                )}
-            </For>
+                    )}
+                </For>
+            </div>
         );
     }
 
