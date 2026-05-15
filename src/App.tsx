@@ -366,6 +366,7 @@ function Location(props: {
     let timeout: NodeJS.Timeout;
     let scrollTimeout: NodeJS.Timeout;
     let locationEl: HTMLElement | undefined;
+    let tooltipEl: HTMLElement | undefined;
     // let observer: MutationObserver | undefined;
 
     const updateTooltipSide = () => {
