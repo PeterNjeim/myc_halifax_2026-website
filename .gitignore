@@ -5,6 +5,8 @@ dist
 .netlify
 .vinxi
 app.config.timestamp_*.js
+imgs.bak
+public.bak
 
 # Environment
 .env
