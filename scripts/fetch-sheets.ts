@@ -65,7 +65,7 @@ async function main() {
             throw new Error(`Invalid data for ${sheetView}`);
         }
 
-        const json = JSON.stringify(data).replaceAll("</script>", "<\\/script>");
+        const json = JSON.stringify(data).replace(/<\/script>/g, "<\\/script>");
 
         if (sheetView === "schedule") {
             validateScheduleData(data);

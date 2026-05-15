@@ -163,9 +163,12 @@ function formatRelative(ms: number): string {
 }
 
 function formatDuration(ms: number): string {
-    const df = new Intl.DurationFormat([], {
-        style: "narrow",
-    });
+    const df =
+        typeof (Intl as any).DurationFormat === "function"
+            ? new (Intl as any).DurationFormat([], {
+                style: "narrow",
+            })
+            : null;
 
     const days = Math.floor(ms / (1000 * 60 * 60 * 24));
     ms -= days * (1000 * 60 * 60 * 24);
@@ -178,12 +181,59 @@ function formatDuration(ms: number): string {
 
     const seconds = Math.floor(ms / 1000);
 
-    return df.format({
-        days,
-        hours,
-        minutes,
-        seconds,
-    });
+    // modern path
+    if (df) {
+        return df.format({
+            days,
+            hours,
+            minutes,
+            seconds,
+        } as any);
+    }
+
+    // fallback path (safe + readable on all Safari versions)
+    const parts: string[] = [];
+
+    if (days) parts.push(`${days}d`);
+    if (hours) parts.push(`${hours}h`);
+    if (minutes) parts.push(`${minutes}m`);
+
+    // only show seconds if small duration or nothing else
+    if (seconds || parts.length === 0) {
+        parts.push(`${seconds}s`);
+    }
+
+    return parts.join(" ");
+}
+
+const formatter =
+    USER_TZ === TIMEZONE ? timeFormatter : timeFormatterWithTZ;
+
+function formatTimeRange(e: {
+    start: Date;
+    end: Date;
+    isExplicitEnd: boolean;
+}) {
+    // fallback string builder
+    const divider = navigator.language.startsWith("fr") ? " – " : "–";
+
+    const simple = () =>
+        `${formatter.format(e.start)}${divider}${formatter.format(e.end)}`;
+
+    if (!e.isExplicitEnd) {
+        return formatter.format(e.start);
+    }
+
+    const frtp =
+        typeof formatter.formatRangeToParts === "function"
+            ? formatter.formatRangeToParts.bind(formatter)
+            : null;
+
+    if (!frtp) {
+        return simple();
+    }
+
+    return frtp(e.start, e.end).filter((part: { type: string; source: string; value: string; }) => ["hour", "minute", "dayPeriod", "second", "fractionalSecondDigits", "timeZoneName",].includes(part.type,) || (part.type === "literal" && part.source === "shared") || (part.type === "literal" && !/[,-/]/.test(part.value,)),).map((part: { value: any; }) => part.value,).join("").trim();
 }
 
 function RenderWithBreaks(props: {
@@ -738,8 +788,19 @@ function getKey(e: Event) {
 
 const SHEET_BASE =
     "https://opensheet.elk.sh/1Sbs6P_5nYPKJPacHhh5f12cRY8nByyOFLfkbhN6FPyw";
-const dir =
-    new Intl.Locale(navigator.language).getTextInfo()?.direction || "ltr";
+// const dir =
+//     new Intl.Locale(navigator.language).getTextInfo()?.direction || "ltr";
+
+const rtlLangs = new Set([
+    "ar",
+    "fa",
+    "he",
+    "ur",
+]);
+
+const lang = navigator.language.split("-")[0];
+
+const dir = rtlLangs.has(lang) ? "rtl" : "ltr";
 
 const isFrench = navigator.language.startsWith("fr");
 const localeText = {
@@ -1487,42 +1548,7 @@ export default function App() {
                                                 >
                                                     {" "}
                                                     {e.isExplicitEnd
-                                                        ? (USER_TZ === TIMEZONE
-                                                            ? timeFormatter
-                                                            : timeFormatterWithTZ
-                                                        )
-                                                            .formatRangeToParts(
-                                                                e.start,
-                                                                e.end,
-                                                            )
-                                                            .filter(
-                                                                (part) =>
-                                                                    [
-                                                                        "hour",
-                                                                        "minute",
-                                                                        "dayPeriod",
-                                                                        "second",
-                                                                        "fractionalSecondDigits",
-                                                                        "timeZoneName",
-                                                                    ].includes(
-                                                                        part.type,
-                                                                    ) ||
-                                                                    (part.type ===
-                                                                        "literal" &&
-                                                                        part.source ===
-                                                                        "shared") ||
-                                                                    (part.type ===
-                                                                        "literal" &&
-                                                                        !/[,-/]/.test(
-                                                                            part.value,
-                                                                        )),
-                                                            )
-                                                            .map(
-                                                                (part) =>
-                                                                    part.value,
-                                                            )
-                                                            .join("")
-                                                            .trim()
+                                                        ? formatTimeRange(e)
                                                         : (USER_TZ === TIMEZONE
                                                             ? timeFormatter
                                                             : timeFormatterWithTZ
