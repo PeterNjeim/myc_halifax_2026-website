@@ -1723,6 +1723,65 @@ export default function App() {
         const seatingDiagramSrc = getImageSrc("gala_seating.png");
         let galaSearchInput!: HTMLInputElement;
 
+        type TableCoordinate = {
+            x: number;
+            y: number;
+        };
+
+        const TABLE_COORDS: Record<string, TableCoordinate> = {
+            "1": { x: 31.45, y: 52 },
+            "3": { x: 22.45, y: 53.1 },
+            "5": { x: 22.45, y: 64.55 },
+            "7": { x: 22.45, y: 76 },
+            "9": { x: 22.45, y: 87.45 },
+            "11": { x: 15.2, y: 87.45 },
+            "13": { x: 15.2, y: 76 },
+            "15": { x: 15.2, y: 64.55 },
+            "17": { x: 15.2, y: 53.1 },
+            "25": { x: 7.8, y: 53.1 },
+            "23": { x: 7.8, y: 64.55 },
+            "21": { x: 7.8, y: 76 },
+            "19": { x: 7.8, y: 87.45 },
+            "33": { x: 7.8, y: 41.6 },
+            "35": { x: 7.8, y: 30.1 },
+            "49": { x: 7.8, y: 18.6 },
+            "47": { x: 15.9, y: 18.6 },
+            "37": { x: 15.9, y: 30.1 },
+            "31": { x: 15.9, y: 41.6 },
+            "29": { x: 24, y: 41.6 },
+            "39": { x: 24, y: 30.1 },
+            "45": { x: 24, y: 18.6 },
+            "43": { x: 32.1, y: 18.6 },
+            "41": { x: 32.1, y: 30.1 },
+            "27": { x: 32.1, y: 41.6 },
+            "2": { x: 43.6, y: 52 },
+            "4": { x: 52.6, y: 53.1 },
+            "6": { x: 52.60, y: 64.55 },
+            "8": { x: 52.60, y: 76 },
+            "10": { x: 52.60, y: 87.45 },
+            "12": { x: 59.85, y: 87.45 },
+            "14": { x: 59.85, y: 76 },
+            "16": { x: 59.85, y: 64.55 },
+            "18": { x: 59.85, y: 53.1 },
+            "26": { x: 67.25, y: 53.1 },
+            "24": { x: 67.25, y: 64.55 },
+            "22": { x: 67.25, y: 76 },
+            "20": { x: 67.25, y: 87.45 },
+            "28": { x: 42.95, y: 41.6 },
+            "42": { x: 42.95, y: 30.1 },
+            "44": { x: 42.95, y: 18.6 },
+            "46": { x: 51.05, y: 18.6 },
+            "40": { x: 51.05, y: 30.1 },
+            "30": { x: 51.05, y: 41.6 },
+            "32": { x: 59.15, y: 41.6 },
+            "38": { x: 59.15, y: 30.1 },
+            "48": { x: 59.15, y: 18.6 },
+            "50": { x: 67.25, y: 18.6 },
+            "36": { x: 67.25, y: 30.1 },
+            "34": { x: 67.25, y: 41.6 },
+
+        };
+
         const results = createMemo(() => {
             const normalized = normalizedQuery();
             if (!normalized)
@@ -1739,6 +1798,8 @@ export default function App() {
                     wholeDistance: number;
                     priority: number;
                 }[];
+
+            const isTableSearch = /^\d+$/.test(normalized);
 
             const compactQuery = compactForSearch(normalized);
             const queryWords = splitSearchWords(normalized);
@@ -1820,6 +1881,25 @@ export default function App() {
                                         ? 2
                                         : 0;
 
+                    if (isTableSearch) {
+                        const table = String(row.table ?? "").trim();
+
+                        return {
+                            row,
+                            score: table === normalized ? 999999 : 0,
+                            exactFirst: false,
+                            exactLast: false,
+                            exactFull: table === normalized,
+                            matchCount: table === normalized ? 1 : 0,
+                            exactMatchLength: table === normalized ? normalized.length : 0,
+                            prefixMatchLength: 0,
+                            nearMatchCount: 0,
+                            wholeDistance:
+                                damerauLevenshteinDistance(table, normalized),
+                            priority: table === normalized ? 999 : 0,
+                        };
+                    }
+
                     return {
                         row,
                         score,
@@ -1862,28 +1942,70 @@ export default function App() {
                 .slice(0, 6);
         });
 
-        const displayResults = createMemo(() => {
+        const highlightedTables = createMemo(() => {
             const exactMatches = results().filter((item) => item.exactFull);
+
+            if (exactMatches.length > 0) {
+                return Array.from(
+                    new Set(
+                        exactMatches
+                            .map((item) => String(item.row.table).trim())
+                            .filter(Boolean),
+                    ),
+                );
+            }
+
+            const normalized = normalizedQuery().trim();
+
+            if (/^\d+$/.test(normalized)) {
+                return [normalized];
+            }
+
+            return [];
+        });
+
+        const displayResults = createMemo(() => {
+            const isTableSearch = createMemo(() =>
+                /^\d+$/.test(normalizedQuery().trim()),
+            );
+
+            const exactMatches = results().filter((item) => item.exactFull);
+
             if (exactMatches.length) {
                 const exactTables = new Set(
                     exactMatches
                         .map((item) => item.row.table)
-                        .filter((table) => table !== undefined && table !== null && table !== ""),
+                        .filter(
+                            (table) =>
+                                table !== undefined &&
+                                table !== null &&
+                                table !== "",
+                        ),
                 );
+
                 if (exactTables.size === 0) {
                     return exactMatches;
                 }
 
-                const exactNames = new Set(exactMatches.map((item) => item.row.name));
+                const exactNames = new Set(
+                    exactMatches.map((item) => item.row.name),
+                );
 
                 return provider
                     .rows()
                     .filter((row) => exactTables.has(row.table))
                     .map((row) => ({
                         row,
-                        exactFull: exactNames.has(row.name),
+
+                        // only highlight exact people for name searches
+                        exactFull:
+                            !isTableSearch() &&
+                            exactNames.has(row.name),
                     }))
-                    .sort((a, b) => String(b.exactFull).localeCompare(String(a.exactFull)));
+                    .sort(
+                        (a, b) =>
+                            Number(b.exactFull) - Number(a.exactFull),
+                    );
             }
 
             return results();
@@ -1968,6 +2090,51 @@ export default function App() {
                             alt="Gala seating chart"
                             loading="lazy"
                         />
+
+                        <For each={highlightedTables()}>
+                            {(table) => {
+                                const coord = TABLE_COORDS[table];
+
+                                if (!coord) return null;
+
+                                return (
+                                    <button
+                                        type="button"
+                                        class="gala-table-highlight"
+                                        style={{
+                                            left: `${coord.x}%`,
+                                            top: `${coord.y}%`,
+                                        }}
+                                        onClick={() => {
+                                            setQuery(table);
+                                            galaSearchInput.blur();
+                                        }}
+                                        aria-label={`Table ${table}`}
+                                    />
+                                );
+                            }}
+                        </For>
+
+                        {/* optional invisible click targets for ALL tables */}
+                        <For each={Object.entries(TABLE_COORDS)}>
+                            {([table, coord]) => (
+                                <button
+                                    type="button"
+                                    class="gala-table-hitbox"
+                                    style={{
+                                        left: `${coord.x}%`,
+                                        top: `${coord.y}%`,
+                                    }}
+                                    onClick={() => {
+                                        setQuery(table);
+                                        galaSearchInput.blur();
+                                    }}
+                                    aria-label={`Table ${table}`}
+                                >
+                                    {highlightedTables().includes(table) ? table : ""}
+                                </button>
+                            )}
+                        </For>
                     </div>
                 </Show>
             </>
