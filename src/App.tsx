@@ -1938,6 +1938,10 @@ export default function App() {
                                                 "gala-results-item": true,
                                                 "gala-exact-result": item.exactFull,
                                             }}
+                                            onClick={() => {
+                                                setQuery(item.row.name);
+                                                galaSearchInput.blur();
+                                            }}
                                         >
                                             <span>{item.row.name}</span>
                                             <span>{item.row.table || "—"}</span>
