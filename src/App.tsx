@@ -1387,7 +1387,7 @@ export default function App() {
                                             }}
                                         >
                                             <span class="title">
-                                                {isLive() && (
+                                                {isLive() && !props.isSpeakers && (
                                                     <span class="dot" />
                                                 )}
 
