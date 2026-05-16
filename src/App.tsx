@@ -2100,7 +2100,7 @@ export default function App() {
                                 return (
                                     <button
                                         type="button"
-                                        class="gala-table-highlight"
+                                        classList={{ "gala-table-highlight": true, "odd": parseInt(table) % 2 === 1, "one": table === "1", "two": table === "2" }}
                                         style={{
                                             left: `${coord.x}%`,
                                             top: `${coord.y}%`,
