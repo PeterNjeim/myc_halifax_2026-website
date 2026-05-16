@@ -2130,9 +2130,7 @@ export default function App() {
                                         galaSearchInput.blur();
                                     }}
                                     aria-label={`Table ${table}`}
-                                >
-                                    {highlightedTables().includes(table) ? table : ""}
-                                </button>
+                                />
                             )}
                         </For>
                     </div>
