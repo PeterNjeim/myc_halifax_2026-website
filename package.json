@@ -1,7 +1,7 @@
 {
   "name": "myc_halifax_2026-website",
   "version": "0.9.0",
-  "description": "MYC Haliafx 2026 website",
+  "description": "MYC Halifax 2026 website",
   "type": "module",
   "scripts": {
     "start": "vite",

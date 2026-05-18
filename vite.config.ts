@@ -38,7 +38,7 @@ export default defineConfig({
       lossless: false,
     },
   })],
-  // base: "/myc_halifax_2026-schedule/",
+  base: "/myc_halifax_2026-website/",
   server: {
     port: 3000,
   },
